@@ -1,0 +1,21 @@
+import type { Metadata } from "next";
+import { ArticleListPage } from "@/components/article-list-page";
+
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | undefined>> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const name = slug.replace(/-/g, " ");
+  return {
+    title: `Artigos de ${name}`,
+    description: `Todos os artigos publicados por ${name} no NeuroBlog.`,
+    alternates: { canonical: `/autor/${slug}` },
+  };
+}
+
+export default async function AuthorPage({ params, searchParams }: Props) {
+  const { slug } = await params;
+  const sp = await searchParams;
+  const merged = Promise.resolve({ ...sp, author: slug });
+  return <ArticleListPage searchParams={merged} title="Por autor" />;
+}
