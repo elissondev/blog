@@ -30,3 +30,4 @@ pnpm-debug.log*
 *.sw?dist/
 build/
 *.log
+dist/
