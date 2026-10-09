@@ -70,13 +70,13 @@ export async function listArticles(params: ListParams): Promise<ListResult> {
   const supabase = await createClientServer();
   const page = Math.max(1, params.page ?? 1);
   const { data, error } = await supabase.rpc("search_articles", {
-    q: params.q?.trim() || null,
-    category_slug: params.category || null,
-    tag_slug: params.tag || null,
-    author_slug: params.author || null,
-    sort: params.sort || "recent",
-    page,
-    per_page: PER_PAGE,
+    p_q: params.q?.trim() || null,
+    p_category_slug: params.category || null,
+    p_tag_slug: params.tag || null,
+    p_author_slug: params.author || null,
+    p_sort: params.sort || "recent",
+    p_page: page,
+    p_per_page: PER_PAGE,
   });
 
   if (error) {
