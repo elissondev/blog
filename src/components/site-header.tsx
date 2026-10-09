@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Brain, Menu } from "lucide-react";
 import { SearchBox } from "./search-box";
@@ -34,7 +35,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto hidden md:block w-56 lg:w-64">
-          <SearchBox />
+          <Suspense fallback={null}><SearchBox /></Suspense>
         </div>
 
         <details className="lg:hidden relative group">

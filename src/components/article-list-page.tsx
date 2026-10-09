@@ -14,7 +14,7 @@ export async function ArticleListPage({ searchParams, title }: { searchParams: P
     category: sp.category ?? null,
     tag: sp.tag ?? null,
     author: sp.author ?? null,
-    sort: sp.sort ?? null,
+    sort: (["recent","oldest","title","relevance"] as const).includes(sp.sort as never) ? (sp.sort as "recent"|"oldest"|"title"|"relevance") : undefined,
   };
   const page = Math.max(1, Number(sp.page ?? 1));
 

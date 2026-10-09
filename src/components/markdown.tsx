@@ -27,7 +27,9 @@ export function Markdown({ content, className }: { content: string; className?: 
               </a>
             );
           },
-          img: ({ src, alt }) => {
+          img: (props) => {
+            const { alt } = props;
+            const src = typeof props.src === "string" ? props.src : undefined;
             if (!src) return null;
             const isLocal = src.startsWith("/") || src.includes("supabase.co");
             return isLocal ? (
