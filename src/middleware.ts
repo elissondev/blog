@@ -27,10 +27,16 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // IMPORTANTE: não coloque lógica entre criar o cliente e getUser()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // IMPORTANTE: não coloque lógica entre criar o cliente e a renovação de sessão.
+  // getSession() lê as cookies locais (rápido, sem rede) e renova tokens expirados;
+  // getUser() faz ida ao servidor de auth a cada request — em ambiente lento isso
+  // trava/retarda toda navegação no painel (aparência de "carregando para sempre").
+  let userId = (await supabase.auth.getSession()).data.session?.user.id;
+  if (!userId) {
+    // confirma apenas quando há refresh token pendente
+    userId = (await supabase.auth.getUser()).data.user?.id;
+  }
+  const user = userId ? { id: userId } : null;
 
   const isProtected = request.nextUrl.pathname.startsWith("/admin");
   const isLoginPage = request.nextUrl.pathname === "/admin/login";

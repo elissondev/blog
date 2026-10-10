@@ -16,10 +16,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   let userName = "Modo demonstração";
   if (isSupabaseConfigured()) {
     const supabase = await createClientServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect("/admin/login");
-    const meta = user.user_metadata?.full_name as string | undefined;
-    userName = meta ?? user.email ?? "Administrador";
+    // getSession() lê as cookies locais (sem ida à rede); o middleware já renovou a sessão.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) redirect("/admin/login");
+    const meta = session.user.user_metadata?.full_name as string | undefined;
+    userName = meta ?? session.user.email ?? "Administrador";
   }
 
   return (

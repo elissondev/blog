@@ -20,8 +20,9 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
   }
 
   const supabase = await createClientServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(`/admin/login?next=/admin/artigo/${id}/editar`);
+  // getSession() é local (cookies) — o middleware já garantiu/renovou a sessão
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) redirect(`/admin/login?next=/admin/artigo/${id}/editar`);
 
   const [{ data: article }, { data: cats }, { data: tags }] = await Promise.all([
     supabase.from("articles").select("*, categories(id,name,slug), profiles(id,full_name,avatar_url), article_tags(tags(id,name,slug))").eq("id", id).maybeSingle(),
