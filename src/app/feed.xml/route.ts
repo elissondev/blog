@@ -3,14 +3,20 @@ import { listArticles, getArticleBySlug } from "@/lib/data";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 function esc(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 export async function GET() {
   const { articles } = await listArticles({ sort: "recent", page: 1 });
 
   // pega o conteúdo completo dos 3 primeiros para enriquecer o feed
-  const full = await Promise.all(articles.slice(0, 3).map((a) => getArticleBySlug(a.slug)));
+  const full = await Promise.all(
+    articles.slice(0, 3).map((a) => getArticleBySlug(a.slug)),
+  );
 
   const items = articles
     .map((a, i) => {
@@ -32,9 +38,9 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>NeuroBlog</title>
+    <title>Élisson Kario — Nutrição e Ciência</title>
     <link>${siteUrl}</link>
-    <description>Artigos baseados em evidências sobre neurociência, saúde mental, produtividade e sono.</description>
+    <description>Estudos, pesquisas e artigos sobre nutrição e alimentação, compartilhados por Élisson Kario, estudante de Nutrição.</description>
     <language>pt-br</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <atom:link href="${siteUrl}/feed.xml" rel="self" type="application/rss+xml"/>
@@ -42,5 +48,7 @@ ${items}
   </channel>
 </rss>`;
 
-  return new Response(xml, { headers: { "Content-Type": "application/rss+xml; charset=utf-8" } });
+  return new Response(xml, {
+    headers: { "Content-Type": "application/rss+xml; charset=utf-8" },
+  });
 }

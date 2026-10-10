@@ -17,9 +17,15 @@ create table if not exists public.categories (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   slug text not null unique,
-  description text default '',
+  description text not null default '',
   created_at timestamptz not null default now()
 );
+
+alter table public.categories
+  add column if not exists description text not null default '';
+update public.categories set description = '' where description is null;
+alter table public.categories alter column description set default '';
+alter table public.categories alter column description set not null;
 
 -- ---------- Tags ----------
 create table if not exists public.tags (
@@ -42,9 +48,13 @@ create table if not exists public.articles (
   category_id uuid references public.categories(id) on delete set null,
   reading_minutes int not null default 1,
   published_at timestamptz,
+  is_pinned boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.articles
+  add column if not exists is_pinned boolean not null default false;
 
 create index if not exists articles_status_published_idx
   on public.articles (status, published_at desc);
@@ -94,6 +104,8 @@ create trigger articles_touch before update on public.articles
 
 -- ---------- RPC: listagem paginada com busca + filtros ----------
 -- (usa aliases nos parâmetros para não conflitar com nomes de colunas)
+drop function if exists public.search_articles(text, text, text, text, text, integer, integer);
+
 create or replace function public.search_articles(
   p_q text default null,
   p_category_slug text default null,
@@ -104,13 +116,14 @@ create or replace function public.search_articles(
   p_per_page int default 9
 ) returns table (
   id uuid, title text, slug text, excerpt text, cover_image_url text,
-  published_at timestamptz, reading_minutes int,
+  published_at timestamptz, is_pinned boolean, reading_minutes int,
   author_name text, category_name text, category_slug text, tags json,
   total_count bigint
 ) language sql stable as $$
   with base as (
     select a.id, a.title, a.slug, a.excerpt, a.cover_image_url,
       a.published_at, a.reading_minutes,
+      a.is_pinned,
       p.full_name as author_name,
       c.name as category_name, c.slug as category_slug,
       coalesce(
@@ -135,10 +148,11 @@ create or replace function public.search_articles(
              or a.title ilike '%' || p_q || '%'
            ))
   )
-  select id, title, slug, excerpt, cover_image_url, published_at, reading_minutes,
+  select id, title, slug, excerpt, cover_image_url, published_at, is_pinned, reading_minutes,
          author_name, category_name, category_slug, tags, total_count
   from base
   order by
+    case when p_category_slug is null and p_tag_slug is null then is_pinned end desc nulls last,
     case when p_sort = 'oldest' then published_at end asc,
     case when p_sort = 'title'   then lower(title)  end asc,
     case when p_sort = 'recent'  then published_at  end desc nulls last,

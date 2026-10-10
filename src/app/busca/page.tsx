@@ -5,10 +5,15 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Busca",
-  description: "Busque artigos por palavra-chave no NeuroBlog.",
+  description:
+    "Pesquise estudos, pesquisas e artigos sobre nutrição e alimentação.",
   robots: { index: false },
 };
 
-export default async function SearchPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   return <ArticleListPage searchParams={searchParams} />;
 }

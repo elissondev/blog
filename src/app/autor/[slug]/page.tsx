@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import { ArticleListPage } from "@/components/article-list-page";
 
-type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | undefined>> };
+type Props = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const name = slug.replace(/-/g, " ");
   return {
     title: `Artigos de ${name}`,
-    description: `Todos os artigos publicados por ${name} no NeuroBlog.`,
+    description: `Artigos publicados por ${name} no site de Élisson Kario.`,
     alternates: { canonical: `/autor/${slug}` },
   };
 }

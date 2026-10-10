@@ -1,25 +1,32 @@
 import Link from "next/link";
-import { Brain, Lock } from "lucide-react";
+import { Leaf, Lock } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { LoginForm } from "@/components/admin/login-form";
 
 export const metadata = {
-  title: "Entrar — Painel | NeuroBlog",
+  title: "Entrar — Painel | Élisson Kario",
   robots: { index: false, follow: false },
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
   const { next } = await searchParams;
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
-          <Link href="/" className="flex items-center gap-2 font-serif text-2xl font-bold">
+          <Link
+            href="/"
+            className="flex items-center gap-2 font-serif text-2xl font-bold"
+          >
             <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <Brain className="size-5" />
+              <Leaf className="size-5" />
             </span>
-            NeuroBlog
+            Élisson Kario
           </Link>
           <p className="text-sm text-muted-foreground">Painel administrativo</p>
         </div>
@@ -31,17 +38,20 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </span>
             <div>
               <h1 className="text-lg font-semibold">Bem-vindo de volta</h1>
-              <p className="text-sm text-muted-foreground">Entre com sua conta para gerenciar artigos.</p>
+              <p className="text-sm text-muted-foreground">
+                Entre com sua conta para gerenciar artigos.
+              </p>
             </div>
           </div>
 
           {!isSupabaseConfigured() ? (
             <div className="space-y-4">
               <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-                O Supabase ainda não está configurado (<code>.env.local</code>). Preencha{" "}
-                <code>NEXT_PUBLIC_SUPABASE_URL</code>, <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> e{" "}
-                <code>SUPABASE_SERVICE_ROLE_KEY</code> para habilitar o login real. O site continua
-                funcionando em modo demonstração.
+                O Supabase ainda não está configurado (<code>.env.local</code>).
+                Preencha <code>NEXT_PUBLIC_SUPABASE_URL</code>,{" "}
+                <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> e{" "}
+                <code>SUPABASE_SERVICE_ROLE_KEY</code> para habilitar o login
+                real. O site continua funcionando em modo demonstração.
               </p>
               <Button variant="outline" className="w-full" asChild>
                 <Link href="/admin">Ir para o painel (modo demo)</Link>

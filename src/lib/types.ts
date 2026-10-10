@@ -6,6 +6,7 @@ export type ArticleCard = {
   slug: string;
   excerpt: string;
   cover_image_url: string | null;
+  is_pinned?: boolean;
   published_at: string | null;
   reading_minutes: number;
   author_name: string;
@@ -15,7 +16,12 @@ export type ArticleCard = {
   total_count: number;
 };
 
-export type Category = { id: string; name: string; slug: string; description: string | null };
+export type Category = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+};
 export type Tag = { id: string; name: string; slug: string };
 
 export type ArticleFull = {
@@ -25,6 +31,7 @@ export type ArticleFull = {
   excerpt: string;
   content_md: string;
   cover_image_url: string | null;
+  is_pinned?: boolean;
   status: "draft" | "published";
   published_at: string | null;
   created_at: string;
