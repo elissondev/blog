@@ -3,8 +3,10 @@
 import { redirect } from "next/navigation";
 import { createClientServer, isSupabaseConfigured } from "@/lib/supabase/server";
 
-export async function loginAction(formData: FormData) {
-  if (!isSupabaseConfigured()) redirect("/admin/login?error=config");
+export type LoginState = { error?: "invalid" | "config" };
+
+export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
+  if (!isSupabaseConfigured()) return { error: "config" };
 
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
@@ -15,7 +17,9 @@ export async function loginAction(formData: FormData) {
   const supabase = await createClientServer();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error) redirect(`/admin/login?error=invalid&next=${encodeURIComponent(next)}`);
+  if (error) {
+    return { error: "invalid" as const };
+  }
 
   // checagem de role: apenas admin/author autenticados chegam aqui; middleware já protege
   redirect(next);

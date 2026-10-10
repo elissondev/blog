@@ -2,20 +2,14 @@ import Link from "next/link";
 import { Brain, Lock } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { loginAction } from "./actions";
+import { LoginForm } from "@/components/admin/login-form";
 
 export const metadata = {
   title: "Entrar — Painel | NeuroBlog",
   robots: { index: false, follow: false },
 };
 
-export default function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string; next?: string }>;
-}) {
+export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
       <div className="w-full max-w-md">
@@ -53,7 +47,7 @@ export default function LoginPage({
               </Button>
             </div>
           ) : (
-            <LoginForm searchParams={searchParams} />
+            <LoginForm />
           )}
         </div>
 
@@ -64,32 +58,5 @@ export default function LoginPage({
         </p>
       </div>
     </div>
-  );
-}
-
-async function LoginForm({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string; next?: string }>;
-}) {
-  const { error, next } = await searchParams;
-  return (
-    <form action={loginAction} className="space-y-4">
-      <input type="hidden" name="next" value={next ?? "/admin"} />
-      <div className="space-y-2">
-        <Label htmlFor="email">E-mail</Label>
-        <Input id="email" name="email" type="email" autoComplete="username" required placeholder="voce@exemplo.com" className="h-11" />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">Senha</Label>
-        <Input id="password" name="password" type="password" autoComplete="current-password" required placeholder="••••••••" className="h-11" />
-      </div>
-      {error && (
-        <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error === "invalid" ? "E-mail ou senha incorretos." : "Ocorreu um erro ao entrar. Tente novamente."}
-        </p>
-      )}
-      <Button type="submit" className="w-full h-11">Entrar</Button>
-    </form>
   );
 }
