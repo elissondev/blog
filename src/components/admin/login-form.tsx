@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { loginAction, type LoginState } from "@/app/admin/login/actions";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(loginAction, {});
   return (
     <form action={action} className="space-y-4">
-      <input type="hidden" name="next" value="/admin" />
+      <input type="hidden" name="next" value={next ?? "/admin"} />
       <div className="space-y-2">
         <Label htmlFor="email">E-mail</Label>
         <Input id="email" name="email" type="email" autoComplete="username" required placeholder="voce@exemplo.com" className="h-11" />

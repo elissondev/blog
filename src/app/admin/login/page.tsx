@@ -9,7 +9,8 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const { next } = await searchParams;
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
       <div className="w-full max-w-md">
@@ -47,7 +48,7 @@ export default function LoginPage() {
               </Button>
             </div>
           ) : (
-            <LoginForm />
+            <LoginForm next={next} />
           )}
         </div>
 

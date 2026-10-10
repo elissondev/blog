@@ -16,11 +16,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   let userName = "Modo demonstração";
   if (isSupabaseConfigured()) {
     const supabase = await createClientServer();
-    // getSession() lê as cookies locais (sem ida à rede); o middleware já renovou a sessão.
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) redirect("/admin/login");
-    const meta = session.user.user_metadata?.full_name as string | undefined;
-    userName = meta ?? session.user.email ?? "Administrador";
+    // getUser() faz UMA validação de rede por navegação (não a cada request,
+    // como fazia o middleware). Cookies adulteradas/expiradas são rejeitadas
+    // aqui — e só então redirecionamos ao login, quebrando qualquer loop.
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) redirect("/admin/login");
+    const meta = data.user.user_metadata?.full_name as string | undefined;
+    userName = meta ?? data.user.email ?? "Administrador";
   }
 
   return (

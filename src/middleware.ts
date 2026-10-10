@@ -28,32 +28,12 @@ export async function middleware(request: NextRequest) {
   );
 
   // IMPORTANTE: não coloque lógica entre criar o cliente e a renovação de sessão.
-  // getSession() lê as cookies locais (rápido, sem rede) e renova tokens expirados;
-  // getUser() faz ida ao servidor de auth a cada request — em ambiente lento isso
-  // trava/retarda toda navegação no painel (aparência de "carregando para sempre").
-  let userId = (await supabase.auth.getSession()).data.session?.user.id;
-  if (!userId) {
-    // confirma apenas quando há refresh token pendente
-    userId = (await supabase.auth.getUser()).data.user?.id;
-  }
-  const user = userId ? { id: userId } : null;
-
-  const isProtected = request.nextUrl.pathname.startsWith("/admin");
-  const isLoginPage = request.nextUrl.pathname === "/admin/login";
-
-  if (isProtected && !user && !isLoginPage) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin/login";
-    url.searchParams.set("next", request.nextUrl.pathname);
-    return NextResponse.redirect(url);
-  }
-
-  if (user && isLoginPage) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin";
-    url.search = "";
-    return NextResponse.redirect(url);
-  }
+  // Não chamamos getUser() aqui: essa ida ao servidor de auth a cada request é
+  // lenta (e, se o host do projeto estiver incorreto na env, pode travar até
+  // timeout — aparência de "carregando para sempre"). A validade real da sessão
+  // é verificada uma única vez pela página /admin/login após o submit; o
+  // layout/páginas do painel usam getSession() (cookies locais, sem rede).
+  await supabase.auth.getSession();
 
   return supabaseResponse;
 }
