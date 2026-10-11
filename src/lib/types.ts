@@ -8,6 +8,7 @@ export type ArticleCard = {
   cover_image_url: string | null;
   is_pinned?: boolean;
   published_at: string | null;
+  updated_at?: string | null;
   reading_minutes: number;
   author_name: string;
   category_name: string | null;

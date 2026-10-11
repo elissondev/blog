@@ -6,6 +6,7 @@ import {
   demoArticleMd,
 } from "./demo-data";
 import type { ArticleCard, Category, Tag } from "./types";
+import { authorDisplayName, authorSlug } from "./utils";
 
 export const PER_PAGE = 9;
 
@@ -177,8 +178,8 @@ export async function getAuthors(): Promise<
     for (const a of demoArticles)
       map.set(a.author_name, (map.get(a.author_name) ?? 0) + 1);
     return [...map.entries()].map(([name, count]) => ({
-      name,
-      slug: name.toLowerCase().replace(/\s+/g, "-"),
+      name: authorDisplayName(name),
+      slug: authorSlug(name),
       count,
     }));
   }
@@ -198,7 +199,11 @@ export async function getAuthors(): Promise<
     map.set(row.author_id, cur);
   }
   return [...map.values()]
-    .map((a) => ({ ...a, slug: a.name.toLowerCase().replace(/\s+/g, "-") }))
+    .map((a) => ({
+      ...a,
+      name: authorDisplayName(a.name),
+      slug: authorSlug(a.name),
+    }))
     .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 }
 
@@ -237,6 +242,7 @@ export async function getArticleBySlug(
     cover_image_url: data.cover_image_url,
     is_pinned: data.is_pinned,
     published_at: data.published_at,
+    updated_at: data.updated_at,
     reading_minutes: data.reading_minutes,
     author_name:
       (data.profiles as { full_name: string } | null)?.full_name ?? "",
@@ -248,12 +254,41 @@ export async function getArticleBySlug(
   };
 }
 
-export async function getAllSlugs(): Promise<string[]> {
-  if (!isSupabaseConfigured()) return demoArticles.map((a) => a.slug);
+export type SitemapArticle = {
+  slug: string;
+  lastModified: string | null;
+};
+
+export async function getSitemapArticles(): Promise<SitemapArticle[]> {
+  if (!isSupabaseConfigured())
+    return demoArticles.map((a) => ({
+      slug: a.slug,
+      lastModified: a.published_at,
+    }));
+
   const supabase = await createClientServer();
-  const { data } = await supabase
-    .from("articles")
-    .select("slug")
-    .eq("status", "published");
-  return (data ?? []).map((d) => d.slug);
+  const articles: SitemapArticle[] = [];
+  const pageSize = 1000;
+
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("articles")
+      .select("slug, updated_at, published_at")
+      .eq("status", "published")
+      .order("slug")
+      .range(offset, offset + pageSize - 1);
+
+    if (error) throw new Error(`sitemap articles: ${error.message}`);
+
+    articles.push(
+      ...(data ?? []).map((article) => ({
+        slug: article.slug,
+        lastModified: article.updated_at ?? article.published_at,
+      })),
+    );
+
+    if (!data || data.length < pageSize) break;
+  }
+
+  return articles;
 }

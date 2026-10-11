@@ -27,10 +27,27 @@ export function formatDate(iso: string | null | undefined): string {
 }
 
 export function authorSlug(name: string): string {
-  return slugify(name);
+  return name.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+export function authorDisplayName(name: string): string {
+  return name.trim().toLowerCase() === "elisson.kario" ? "Élisson Kario" : name;
+}
+
+export function canonicalPageUrl(
+  pathname: string,
+  searchParams: Record<string, string | undefined>,
+): string {
+  const page = Number(searchParams.page);
+  return Number.isInteger(page) && page > 1
+    ? `${pathname}?page=${page}`
+    : pathname;
 }
 
 export function readingTime(md: string): number {
-  const words = md.replace(/[#*_`>[\]()!-]/g, " ").split(/\s+/).filter(Boolean).length;
+  const words = md
+    .replace(/[#*_`>[\]()!-]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean).length;
   return Math.max(1, Math.round(words / 200));
 }

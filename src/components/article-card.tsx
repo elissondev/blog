@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Clock, Pin, User } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { formatDate, authorSlug } from "@/lib/utils";
+import { formatDate, authorDisplayName, authorSlug } from "@/lib/utils";
 import type { ArticleCard } from "@/lib/types";
 
 export function ArticleCardComponent({ article }: { article: ArticleCard }) {
@@ -56,7 +56,7 @@ export function ArticleCardComponent({ article }: { article: ArticleCard }) {
               href={`/autor/${authorSlug(article.author_name)}`}
               className="hover:text-foreground"
             >
-              {article.author_name}
+              {authorDisplayName(article.author_name)}
             </Link>
           </span>
           <span>{article.reading_minutes} min de leitura</span>

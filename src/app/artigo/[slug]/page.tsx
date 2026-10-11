@@ -7,9 +7,11 @@ import { getArticleBySlug, listArticles } from "@/lib/data";
 import { Markdown } from "@/components/markdown";
 import { ArticleCardComponent } from "@/components/article-card";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, authorSlug } from "@/lib/utils";
+import { authorDisplayName, formatDate, authorSlug } from "@/lib/utils";
 
 type Props = { params: Promise<{ slug: string }> };
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -21,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: article.title,
     description: article.excerpt,
     keywords: article.tags.map((t) => t.name),
-    authors: [{ name: article.author_name }],
+    authors: [{ name: authorDisplayName(article.author_name) }],
     alternates: { canonical: url },
     openGraph: {
       type: "article",
@@ -29,6 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: article.excerpt,
       url,
       publishedTime: article.published_at ?? undefined,
+      modifiedTime: article.updated_at ?? article.published_at ?? undefined,
       images: article.cover_image_url ? [article.cover_image_url] : undefined,
       section: article.category_name ?? undefined,
       tags: article.tags.map((t) => t.name),
@@ -58,15 +61,21 @@ export default async function ArticlePage({ params }: Props) {
 
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Article",
+    "@type": "BlogPosting",
     headline: article.title,
     description: article.excerpt,
     image: article.cover_image_url ?? undefined,
     datePublished: article.published_at,
-    dateModified: article.published_at,
-    author: { "@type": "Person", name: article.author_name },
+    dateModified: article.updated_at ?? article.published_at,
+    author: {
+      "@type": "Person",
+      name: authorDisplayName(article.author_name),
+    },
     publisher: { "@type": "Person", name: "Élisson Kario" },
-    mainEntityOfPage: { "@type": "WebPage", "@id": `/artigo/${article.slug}` },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${siteUrl}/artigo/${article.slug}`,
+    },
     keywords: article.tags.map((t) => t.name).join(", "),
     articleSection: article.category_name ?? undefined,
     timeRequired: `PT${article.reading_minutes}M`,
@@ -120,7 +129,7 @@ export default async function ArticlePage({ params }: Props) {
                 href={`/autor/${authorSlug(article.author_name)}`}
                 className="font-medium text-foreground hover:text-primary"
               >
-                {article.author_name}
+                {authorDisplayName(article.author_name)}
               </Link>
             </span>
             <time
