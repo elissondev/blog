@@ -7,8 +7,21 @@
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null default '',
+  description text not null default '',
   avatar_url text,
   role text not null default 'author' check (role in ('admin','author')),
+  created_at timestamptz not null default now()
+);
+
+alter table public.profiles
+  add column if not exists description text not null default '';
+
+-- ---------- Citações inspiradoras ----------
+create table if not exists public.quotes (
+  id uuid primary key default gen_random_uuid(),
+  text text not null check (char_length(btrim(text)) between 1 and 1000),
+  author text not null check (char_length(btrim(author)) between 1 and 120),
+  created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now()
 );
 
@@ -164,6 +177,7 @@ $$;
 
 -- ---------- RLS ----------
 alter table public.profiles   enable row level security;
+alter table public.quotes     enable row level security;
 alter table public.categories enable row level security;
 alter table public.tags       enable row level security;
 alter table public.articles   enable row level security;
@@ -171,6 +185,17 @@ alter table public.article_tags enable row level security;
 
 create policy "profiles_read"  on public.profiles for select using (true);
 create policy "profiles_update_self" on public.profiles for update using (auth.uid() = id);
+create policy "quotes_read" on public.quotes for select using (true);
+create policy "quotes_insert" on public.quotes for insert to authenticated
+  with check (created_by = auth.uid());
+create policy "quotes_delete" on public.quotes for delete to authenticated
+  using (
+    created_by = auth.uid()
+    or exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
 
 create policy "categories_read" on public.categories for select using (true);
 create policy "tags_read"       on public.tags for select using (true);
@@ -188,6 +213,8 @@ create policy "categories_write" on public.categories to authenticated using (tr
 create policy "tags_write"       on public.tags to authenticated using (true);
 
 grant execute on function public.search_articles to anon, authenticated;
+grant select on public.quotes to anon, authenticated;
+grant insert, delete on public.quotes to authenticated;
 
 -- ---------- Storage: bucket de imagens (público) ----------
 insert into storage.buckets (id, name, public) values ('article-images','article-images', true)

@@ -5,8 +5,8 @@ import {
   demoTags,
   demoArticleMd,
 } from "./demo-data";
-import type { ArticleCard, Category, Tag } from "./types";
-import { authorDisplayName, authorSlug } from "./utils";
+import type { ArticleCard, Category, InspirationalQuote, Tag } from "./types";
+import { authorDisplayName, authorFilterSlug, authorSlug } from "./utils";
 
 export const PER_PAGE = 9;
 
@@ -119,6 +119,25 @@ export async function listArticles(params: ListParams): Promise<ListResult> {
   };
 }
 
+export async function getRandomQuote(): Promise<InspirationalQuote | null> {
+  if (!isSupabaseConfigured()) return null;
+
+  const supabase = await createClientServer();
+  const { data, error } = await supabase
+    .from("quotes")
+    .select("id, text, author")
+    .limit(1000);
+
+  if (error) {
+    console.error("quotes:", error.message);
+    return null;
+  }
+
+  const quotes = (data ?? []) as InspirationalQuote[];
+  if (quotes.length === 0) return null;
+  return quotes[Math.floor(Math.random() * quotes.length)];
+}
+
 export async function getCategories(): Promise<
   (Category & { count: number })[]
 > {
@@ -171,7 +190,14 @@ export async function getTags(): Promise<(Tag & { count: number })[]> {
 }
 
 export async function getAuthors(): Promise<
-  { name: string; slug: string; count: number }[]
+  {
+    name: string;
+    slug: string;
+    filterSlug: string;
+    count: number;
+    description: string | null;
+    avatar_url: string | null;
+  }[]
 > {
   if (!isSupabaseConfigured()) {
     const map = new Map<string, number>();
@@ -180,21 +206,44 @@ export async function getAuthors(): Promise<
     return [...map.entries()].map(([name, count]) => ({
       name: authorDisplayName(name),
       slug: authorSlug(name),
+      filterSlug: authorFilterSlug(name),
       count,
+      description: null,
+      avatar_url: null,
     }));
   }
 
   const supabase = await createClientServer();
   const { data } = await supabase
     .from("articles")
-    .select("author_id, profiles(full_name)")
+    .select("author_id, profiles(full_name, description, avatar_url)")
     .eq("status", "published");
-  const map = new Map<string, { name: string; count: number }>();
+  const map = new Map<
+    string,
+    {
+      name: string;
+      count: number;
+      description: string | null;
+      avatar_url: string | null;
+    }
+  >();
   for (const row of data ?? []) {
-    const p = (row as unknown as { profiles: { full_name: string } | null })
-      .profiles;
+    const p = (
+      row as unknown as {
+        profiles: {
+          full_name: string;
+          description: string | null;
+          avatar_url: string | null;
+        } | null;
+      }
+    ).profiles;
     if (!p?.full_name) continue;
-    const cur = map.get(row.author_id) ?? { name: p.full_name, count: 0 };
+    const cur = map.get(row.author_id) ?? {
+      name: p.full_name,
+      count: 0,
+      description: p.description,
+      avatar_url: p.avatar_url,
+    };
     cur.count += 1;
     map.set(row.author_id, cur);
   }
@@ -203,6 +252,7 @@ export async function getAuthors(): Promise<
       ...a,
       name: authorDisplayName(a.name),
       slug: authorSlug(a.name),
+      filterSlug: authorFilterSlug(a.name),
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 }

@@ -27,6 +27,10 @@ export function formatDate(iso: string | null | undefined): string {
 }
 
 export function authorSlug(name: string): string {
+  return slugify(authorDisplayName(name));
+}
+
+export function authorFilterSlug(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, "-");
 }
 

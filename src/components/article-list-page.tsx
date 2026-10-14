@@ -2,7 +2,13 @@ import { Hero } from "./hero";
 import { SidebarLeft } from "./sidebar-left";
 import { ArticleCardComponent } from "./article-card";
 import { Pagination } from "./pagination";
-import { listArticles, getCategories, getTags, getAuthors } from "@/lib/data";
+import {
+  listArticles,
+  getCategories,
+  getTags,
+  getAuthors,
+  getRandomQuote,
+} from "@/lib/data";
 
 type SP = Record<string, string | undefined>;
 
@@ -28,19 +34,32 @@ export async function ArticleListPage({
       : undefined,
   };
   const page = Math.max(1, Number(sp.page ?? 1));
+  const showHomeHero =
+    !filters.category && !filters.tag && !filters.author && !filters.q;
 
-  const [result, categories, tags, authors] = await Promise.all([
+  const [result, categories, tags, authors, quote] = await Promise.all([
     listArticles({ ...filters, page }),
     getCategories(),
     getTags(),
     getAuthors(),
+    showHomeHero ? getRandomQuote() : Promise.resolve(null),
   ]);
   const Heading = headingLevel;
 
   return (
     <>
-      {!filters.category && !filters.tag && !filters.author && !filters.q && (
-        <Hero />
+      {showHomeHero && <Hero />}
+      {showHomeHero && quote && (
+        <div className="mx-auto mt-4 max-w-7xl px-4 sm:px-6 text-center">
+          <blockquote className="rounded-lg border-l-4 border-primary bg-secondary/40 px-5 py-4 sm:px-8">
+            <p className="whitespace-pre-line font-serif text-lg leading-relaxed sm:text-xl">
+              “{quote.text}”
+            </p>
+            <footer className="mt-3 text-sm font-medium text-muted-foreground text-center">
+              — {quote.author}
+            </footer>
+          </blockquote>
+        </div>
       )}
 
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6" id="artigos">

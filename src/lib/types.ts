@@ -24,6 +24,12 @@ export type Category = {
   description: string | null;
 };
 export type Tag = { id: string; name: string; slug: string };
+export type InspirationalQuote = {
+  id: string;
+  text: string;
+  author: string;
+  created_at?: string;
+};
 
 export type ArticleFull = {
   id: string;

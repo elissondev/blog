@@ -5,6 +5,8 @@ import {
   LogOut,
   PlusCircle,
   ExternalLink,
+  Users,
+  Quote,
 } from "lucide-react";
 import {
   isSupabaseConfigured,
@@ -63,6 +65,18 @@ export default async function AdminLayout({
               className="flex items-center gap-1.5 rounded-md px-3 py-1.5 hover:bg-accent"
             >
               <FolderTree className="size-4" /> Categorias &amp; Tags
+            </Link>
+            <Link
+              href="/admin/usuarios"
+              className="flex items-center gap-1.5 rounded-md px-3 py-1.5 hover:bg-accent"
+            >
+              <Users className="size-4" /> Usuários
+            </Link>
+            <Link
+              href="/admin/citacoes"
+              className="flex items-center gap-1.5 rounded-md px-3 py-1.5 hover:bg-accent"
+            >
+              <Quote className="size-4" /> Citações
             </Link>
           </nav>
           <div className="ml-auto flex items-center gap-2">
