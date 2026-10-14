@@ -9,7 +9,7 @@ import Image from "next/image";
 import { ExpandableText } from "./expandable-text";
 
 export function Hero({
-  title = "Nutrição com ciência e excelência",
+  title = "Nutrição, Estilo de Vida e Sáude",
   description = "Sou Élisson Kario. Compartilho estudos, pesquisas e artigos para aproximar a ciência da alimentação do dia a dia e do estilo de vida saudável.",
   compact = false,
   showActions = !compact,
