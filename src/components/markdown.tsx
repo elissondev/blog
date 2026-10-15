@@ -24,8 +24,13 @@ export function Markdown({
         rehypePlugins={[rehypeSlug]}
         components={{
           table: ({ children, ...props }) => (
-            <div className="my-6 max-w-full overflow-x-auto">
-              <table {...props}>{children}</table>
+            <div className="my-6 max-w-full overflow-x-auto rounded-xl border border-border bg-card">
+              <table
+                {...props}
+                className="w-max min-w-full border-separate border-spacing-0"
+              >
+                {children}
+              </table>
             </div>
           ),
           pre: ({ children, ...props }) => (

@@ -150,4 +150,65 @@
   font-style: italic;
 }
 
+.prose table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.prose table th,
+.prose table td {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 0.72rem 0.9rem;
+  text-align: left;
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.prose table th:last-child,
+.prose table td:last-child {
+  border-right: none;
+}
+
+.prose table tr:last-child td,
+.prose table tr:last-child th {
+  border-bottom: none;
+}
+
+.prose table thead th {
+  background: color-mix(in srgb, var(--muted) 82%, transparent);
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.prose table thead th:first-child {
+  border-top-left-radius: 0.75rem;
+}
+
+.prose table thead th:last-child {
+  border-top-right-radius: 0.75rem;
+}
+
+.prose table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 0.75rem;
+}
+
+.prose table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 0.75rem;
+}
+
+.prose table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--muted) 24%, transparent);
+}
+
 @plugin "@tailwindcss/typography";

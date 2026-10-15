@@ -8,6 +8,10 @@ import StarterKit from "@tiptap/starter-kit";
 import ImageExtension from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import LinkExtension from "@tiptap/extension-link";
+import { Table } from "@tiptap/extension-table";
+import { TableCell } from "@tiptap/extension-table/cell";
+import { TableHeader } from "@tiptap/extension-table/header";
+import { TableRow } from "@tiptap/extension-table/row";
 import {
   Bold,
   Italic,
@@ -30,6 +34,7 @@ import {
   Check,
   Pin,
   X,
+  TableProperties,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -70,6 +75,12 @@ function inlineToMd(node: Node): string {
       t = `[${t}](${(m.attrs?.href as string) ?? ""})`;
   }
   return t;
+}
+
+function cellToMd(cell: Node): string {
+  return (cell.content ?? [])
+    .map((c) => (c.type === "text" ? inlineToMd(c) : blockToMd(c)))
+    .join("");
 }
 
 function blockToMd(node: Node, depth = 0): string {
@@ -115,6 +126,33 @@ function blockToMd(node: Node, depth = 0): string {
       return "---";
     case "image":
       return `![${(node.attrs?.alt as string) ?? ""}](${(node.attrs?.src as string) ?? ""})`;
+    case "table": {
+      const rows = (node.content ?? []).map((row) =>
+        (row.content ?? []).map((cell) =>
+          cellToMd(cell as Node)
+            .replace(/\n/g, " ")
+            .replace(/\|/g, "\\|")
+            .trim(),
+        ),
+      );
+      if (!rows.length) return "";
+      const [header, ...bodyRows] = rows;
+      const separator = header.map(() => "---");
+      return [
+        `| ${header.join(" | ")} |`,
+        `| ${separator.join(" | ")} |`,
+        ...bodyRows.map((row) => `| ${row.join(" | ")} |`),
+      ].join("\n");
+    }
+    case "tableRow":
+      return (node.content ?? [])
+        .map((cell) => blockToMd(cell as Node))
+        .join(" | ");
+    case "tableHeader":
+    case "tableCell":
+      return (node.content ?? [])
+        .map((c) => (c.type === "text" ? inlineToMd(c) : blockToMd(c, depth)))
+        .join("");
     default:
       return inline;
   }
@@ -141,8 +179,19 @@ function mdToHtml(md: string): string {
       .replace(/~~([^~]+)~~/g, "<s>$1</s>")
       .replace(/`([^`]+)`/g, "<code>$1</code>")
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-  for (const raw of lines) {
+  const parseTableLine = (line: string): string[] =>
+    line
+      .trim()
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((cell) => cell.trim());
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const raw = lines[i];
     const line = raw.trimEnd();
+    const nextLine = lines[i + 1]?.trim() ?? "";
+
     if (line.startsWith("```")) {
       if (inCode) {
         out.push(`<pre><code>${codeBuf.join("\n")}</code></pre>`);
@@ -155,10 +204,32 @@ function mdToHtml(md: string): string {
       codeBuf.push(raw.replace(/&/g, "&amp;").replace(/</g, "&lt;"));
       continue;
     }
-    if (inList && !/^[-*] |\^\d+\. /.test(line)) {
+    if (inList && !/^[-*] /.test(line) && !/^\d+\. /.test(line)) {
       out.push(`</${inList}>`);
       inList = null;
     }
+
+    const isTableHeader =
+      /^\|?.*\|.*\|?$/.test(line) &&
+      /^\|?(?:\s*:?-{3,}:?\s*\|)+\s*$/.test(nextLine);
+    if (isTableHeader) {
+      const header = parseTableLine(line);
+      const bodyRows: string[][] = [];
+      i += 1;
+      while (i + 1 < lines.length) {
+        const candidate = lines[i + 1]?.trim() ?? "";
+        if (!candidate || !/^\|.*\|$/.test(candidate)) break;
+        bodyRows.push(parseTableLine(candidate));
+        i += 1;
+      }
+      const thead = `<thead><tr>${header.map((cell) => `<th>${inline(cell)}</th>`).join("")}</tr></thead>`;
+      const tbody = bodyRows.length
+        ? `<tbody>${bodyRows.map((row) => `<tr>${row.map((cell) => `<td>${inline(cell)}</td>`).join("")}</tr>`).join("")}</tbody>`
+        : "";
+      out.push(`<table>${thead}${tbody}</table>`);
+      continue;
+    }
+
     if (/^# /.test(line)) out.push(`<h1>${inline(line.slice(2))}</h1>`);
     else if (/^## /.test(line)) out.push(`<h2>${inline(line.slice(3))}</h2>`);
     else if (/^### /.test(line)) out.push(`<h3>${inline(line.slice(4))}</h3>`);
@@ -252,6 +323,10 @@ export function ArticleForm({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
       ImageExtension,
       Placeholder.configure({
         placeholder:
@@ -607,6 +682,19 @@ export function ArticleForm({
             onClick={() => editor?.chain().focus().setHorizontalRule().run()}
           >
             <Minus className="size-4" />
+          </TBtn>
+          <TBtn
+            label="Inserir tabela"
+            active={!!editor?.isActive("table")}
+            onClick={() =>
+              editor
+                ?.chain()
+                .focus()
+                .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                .run()
+            }
+          >
+            <TableProperties className="size-4" />
           </TBtn>
           <span className="mx-1 h-6 w-px bg-border" aria-hidden />
           <TBtn
