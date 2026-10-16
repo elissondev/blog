@@ -1,4 +1,6 @@
-import { isSupabaseConfigured, createClientServer } from "./supabase/server";
+import { cacheLife, cacheTag } from "next/cache";
+import { isSupabaseConfigured, createClientPublic } from "./supabase/server";
+import { CACHE_TAGS } from "./cache";
 import {
   demoArticles,
   demoCategories,
@@ -91,8 +93,35 @@ function demoList(params: ListParams): ListResult {
 export async function listArticles(params: ListParams): Promise<ListResult> {
   if (!isSupabaseConfigured()) return demoList(params);
 
-  const supabase = await createClientServer();
-  const page = Math.max(1, params.page ?? 1);
+  const normalizedParams: Required<ListParams> = {
+    q: params.q?.trim() || null,
+    category: params.category || null,
+    tag: params.tag || null,
+    author: params.author || null,
+    sort: params.sort || "recent",
+    page: Math.max(1, params.page ?? 1),
+  };
+  return getCachedArticleList(normalizedParams);
+}
+
+async function getCachedArticleList(
+  params: Required<ListParams>,
+): Promise<ListResult> {
+  "use cache";
+  cacheLife(
+    params.q
+      ? { stale: 300, revalidate: 60, expire: 3600 }
+      : { stale: 300, revalidate: 3600, expire: 86400 },
+  );
+  cacheTag(
+    CACHE_TAGS.articles,
+    CACHE_TAGS.authors,
+    CACHE_TAGS.categories,
+    CACHE_TAGS.tags,
+  );
+
+  const supabase = createClientPublic();
+  const page = params.page;
   const { data, error } = await supabase.rpc("search_articles", {
     p_q: params.q?.trim() || null,
     p_category_slug: params.category || null,
@@ -122,7 +151,17 @@ export async function listArticles(params: ListParams): Promise<ListResult> {
 export async function getRandomQuote(): Promise<InspirationalQuote | null> {
   if (!isSupabaseConfigured()) return null;
 
-  const supabase = await createClientServer();
+  const quotes = await getCachedQuotes();
+  if (quotes.length === 0) return null;
+  return quotes[Math.floor(Math.random() * quotes.length)];
+}
+
+async function getCachedQuotes(): Promise<InspirationalQuote[]> {
+  "use cache";
+  cacheLife("days");
+  cacheTag(CACHE_TAGS.quotes);
+
+  const supabase = createClientPublic();
   const { data, error } = await supabase
     .from("quotes")
     .select("id, text, author")
@@ -130,12 +169,10 @@ export async function getRandomQuote(): Promise<InspirationalQuote | null> {
 
   if (error) {
     console.error("quotes:", error.message);
-    return null;
+    return [];
   }
 
-  const quotes = (data ?? []) as InspirationalQuote[];
-  if (quotes.length === 0) return null;
-  return quotes[Math.floor(Math.random() * quotes.length)];
+  return (data ?? []) as InspirationalQuote[];
 }
 
 export async function getCategories(): Promise<
@@ -147,7 +184,17 @@ export async function getCategories(): Promise<
       count: demoArticles.filter((a) => a.category_slug === c.slug).length,
     }));
 
-  const supabase = await createClientServer();
+  return getCachedCategories();
+}
+
+async function getCachedCategories(): Promise<
+  (Category & { count: number })[]
+> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.categories, CACHE_TAGS.articles);
+
+  const supabase = createClientPublic();
   const [{ data: cats }, { data: arts }] = await Promise.all([
     supabase.from("categories").select("*").order("name"),
     supabase.from("articles").select("category_id").eq("status", "published"),
@@ -172,7 +219,15 @@ export async function getTags(): Promise<(Tag & { count: number })[]> {
         .length,
     }));
 
-  const supabase = await createClientServer();
+  return getCachedTags();
+}
+
+async function getCachedTags(): Promise<(Tag & { count: number })[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.tags, CACHE_TAGS.articles);
+
+  const supabase = createClientPublic();
   const [{ data: tags }, { data: links }] = await Promise.all([
     supabase.from("tags").select("*").order("name"),
     supabase
@@ -215,7 +270,17 @@ export async function getAuthors(): Promise<
     }));
   }
 
-  const supabase = await createClientServer();
+  return getCachedAuthors();
+}
+
+async function getCachedAuthors(): Promise<
+  Awaited<ReturnType<typeof getAuthors>>
+> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.authors, CACHE_TAGS.articles);
+
+  const supabase = createClientPublic();
   const { data } = await supabase
     .from("articles")
     .select(
@@ -272,24 +337,55 @@ export async function getArticleBySlug(
     return { ...found, content_md: demoArticleMd };
   }
 
-  const supabase = await createClientServer();
+  return getCachedArticle(slug);
+}
+
+async function getCachedArticle(
+  slug: string,
+): Promise<(ArticleCard & { content_md: string }) | null> {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 60 * 60 * 24 * 365 });
+
+  const supabase = createClientPublic();
   const { data } = await supabase
     .from("articles")
     .select(
-      "*, categories(name, slug), profiles(full_name, avatar_url), article_tags(tags(name, slug))",
+      "*, categories(id, name, slug), profiles(id, full_name, avatar_url), article_tags(tags(id, name, slug))",
     )
     .eq("slug", slug)
     .eq("status", "published")
     .maybeSingle();
 
-  if (!data) return null;
+  const cacheTags = [`article:${slug}`];
+  if (!data) {
+    cacheTag(...cacheTags);
+    return null;
+  }
+
+  const profile = data.profiles as {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+  } | null;
+  const category = data.categories as {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
   const tagsList = (
     (data.article_tags ?? []) as unknown as {
-      tags: { name: string; slug: string };
+      tags: { id: string; name: string; slug: string } | null;
     }[]
   )
     .map((x) => x.tags)
-    .filter(Boolean);
+    .filter(
+      (tag): tag is { id: string; name: string; slug: string } => tag !== null,
+    );
+
+  if (profile?.id) cacheTags.push(`author:${profile.id}`);
+  if (category?.id) cacheTags.push(`category:${category.id}`);
+  cacheTags.push(...tagsList.map((tag) => `tag:${tag.id}`));
+  cacheTag(...cacheTags);
 
   return {
     id: data.id,
@@ -298,13 +394,13 @@ export async function getArticleBySlug(
     excerpt: data.excerpt,
     cover_image_url: data.cover_image_url,
     is_pinned: data.is_pinned,
+    show_health_disclaimer: data.show_health_disclaimer ?? false,
     published_at: data.published_at,
     updated_at: data.updated_at,
     reading_minutes: data.reading_minutes,
-    author_name:
-      (data.profiles as { full_name: string } | null)?.full_name ?? "",
-    category_name: (data.categories as { name: string } | null)?.name ?? null,
-    category_slug: (data.categories as { slug: string } | null)?.slug ?? null,
+    author_name: profile?.full_name ?? "",
+    category_name: category?.name ?? null,
+    category_slug: category?.slug ?? null,
     tags: tagsList,
     total_count: 1,
     content_md: data.content_md,
@@ -323,7 +419,21 @@ export async function getSitemapArticles(): Promise<SitemapArticle[]> {
       lastModified: a.published_at,
     }));
 
-  const supabase = await createClientServer();
+  return getCachedSitemapArticles();
+}
+
+async function getCachedSitemapArticles(): Promise<SitemapArticle[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(
+    CACHE_TAGS.sitemap,
+    CACHE_TAGS.articles,
+    CACHE_TAGS.categories,
+    CACHE_TAGS.tags,
+    CACHE_TAGS.authors,
+  );
+
+  const supabase = createClientPublic();
   const articles: SitemapArticle[] = [];
   const pageSize = 1000;
 

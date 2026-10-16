@@ -5,8 +5,6 @@ import {
 import { QuoteManager } from "@/components/admin/quote-manager";
 import type { InspirationalQuote } from "@/lib/types";
 
-export const dynamic = "force-dynamic";
-
 export default async function AdminQuotesPage() {
   if (!isSupabaseConfigured()) {
     return (

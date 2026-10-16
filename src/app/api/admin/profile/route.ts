@@ -1,5 +1,5 @@
-import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
+import { CACHE_TAGS, invalidatePublicCache } from "@/lib/cache";
 import {
   createClientServer,
   isSupabaseConfigured,
@@ -75,7 +75,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    revalidatePath("/", "layout");
+    invalidatePublicCache(
+      CACHE_TAGS.articles,
+      CACHE_TAGS.authors,
+      CACHE_TAGS.sitemap,
+      `author:${user.id}`,
+    );
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

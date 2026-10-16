@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
+import { CACHE_TAGS, invalidatePublicCache } from "@/lib/cache";
 import {
   createClientServer,
   isSupabaseConfigured,
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
     });
     if (error) throw error;
 
-    revalidatePath("/", "layout");
+    invalidatePublicCache(CACHE_TAGS.quotes);
     revalidatePath("/admin/citacoes");
     return NextResponse.json({ ok: true });
   } catch (cause) {
@@ -94,7 +95,7 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  revalidatePath("/", "layout");
+  invalidatePublicCache(CACHE_TAGS.quotes);
   revalidatePath("/admin/citacoes");
   return NextResponse.json({ ok: true });
 }

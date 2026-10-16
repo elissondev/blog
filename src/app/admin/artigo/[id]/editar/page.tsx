@@ -7,8 +7,6 @@ import { ArticleForm } from "@/components/admin/article-form";
 import { demoCategories, demoTags } from "@/lib/demo-data";
 import type { ArticleFull } from "@/lib/types";
 
-export const dynamic = "force-dynamic";
-
 export default async function EditArticlePage({
   params,
 }: {

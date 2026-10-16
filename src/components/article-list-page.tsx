@@ -93,7 +93,11 @@ export async function ArticleListPage({
             ) : (
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {result.articles.map((a) => (
-                  <ArticleCardComponent key={a.id} article={a} />
+                  <ArticleCardComponent
+                    key={a.id}
+                    article={a}
+                    showTags={false}
+                  />
                 ))}
               </div>
             )}

@@ -9,9 +9,10 @@ import {
   ChevronLeft,
   Heart,
   MessageCircle,
+  TriangleAlert,
 } from "lucide-react";
 import { getArticleBySlug, getAuthors, listArticles } from "@/lib/data";
-import { Markdown } from "@/components/markdown";
+import { hasReferencesSection, Markdown } from "@/components/markdown";
 import { ExpandableText } from "@/components/expandable-text";
 import { ArticleCardComponent } from "@/components/article-card";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +72,25 @@ export default async function ArticlePage({ params }: Props) {
   const author = authors.find(
     (item) => item.slug === authorSlug(article.author_name),
   );
+  const healthDisclaimer = article.show_health_disclaimer ? (
+    <aside
+      role="note"
+      className="not-prose my-8 flex flex-col items-start gap-2 border-l-4 border-amber-500 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 sm:flex-row sm:gap-3 dark:bg-amber-950/30 dark:text-amber-100"
+    >
+      <TriangleAlert
+        className="size-5 shrink-0 text-amber-700 sm:mt-0.5 dark:text-amber-300"
+        aria-hidden="true"
+      />
+      <div>
+        <strong>IMPORTANTE:</strong> As informações contidas neste artigo são
+        apenas para divulgação do conhecimento, não devendo ser usadas com o
+        objetivo de diagnosticar doenças ou estabelecer qualquer tipo de
+        tratamento. Lembramos que diagnósticos e tratamentos precisam sempre ser
+        estabelecidos por um profissional de saúde de sua confiança.
+      </div>
+    </aside>
+  ) : null;
+  const hasReferences = hasReferencesSection(article.content_md);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -168,7 +188,11 @@ export default async function ArticlePage({ params }: Props) {
           </div>
         )}
 
-        <Markdown content={article.content_md} />
+        <Markdown
+          content={article.content_md}
+          beforeReferences={hasReferences ? healthDisclaimer : undefined}
+        />
+        {!hasReferences && healthDisclaimer}
 
         <section className="mt-12 border-t pt-8" aria-labelledby="sobre-autor">
           <h2 id="sobre-autor" className="mb-4 font-serif text-2xl font-bold">

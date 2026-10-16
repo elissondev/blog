@@ -4,8 +4,6 @@ import {
 } from "@/lib/supabase/server";
 import { ProfileManager } from "@/components/admin/profile-manager";
 
-export const dynamic = "force-dynamic";
-
 export default async function AdminUsersPage() {
   if (!isSupabaseConfigured()) {
     return (

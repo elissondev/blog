@@ -6,7 +6,13 @@ import { Button } from "./ui/button";
 import { formatDate, authorDisplayName, authorSlug } from "@/lib/utils";
 import type { ArticleCard } from "@/lib/types";
 
-export function ArticleCardComponent({ article }: { article: ArticleCard }) {
+export function ArticleCardComponent({
+  article,
+  showTags = true,
+}: {
+  article: ArticleCard;
+  showTags?: boolean;
+}) {
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md">
       <Link
@@ -72,7 +78,7 @@ export function ArticleCardComponent({ article }: { article: ArticleCard }) {
           {article.excerpt}
         </p>
 
-        {article.tags.length > 0 && (
+        {showTags && article.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {article.tags.map((t) => (
               <Badge key={t.slug} variant="secondary" asChild>

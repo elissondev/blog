@@ -11,8 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import type { ArticleCard } from "@/lib/types";
 import { DeleteArticleButton } from "@/components/admin/delete-article-button";
 
-export const dynamic = "force-dynamic";
-
 type Row = Pick<
   ArticleCard,
   | "id"

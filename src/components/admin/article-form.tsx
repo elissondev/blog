@@ -303,6 +303,9 @@ export function ArticleForm({
   const [excerpt, setExcerpt] = useState(article?.excerpt ?? "");
   const [coverUrl, setCoverUrl] = useState(article?.cover_image_url ?? "");
   const [isPinned, setIsPinned] = useState(article?.is_pinned ?? false);
+  const [showHealthDisclaimer, setShowHealthDisclaimer] = useState(
+    article?.show_health_disclaimer ?? false,
+  );
   const [categoryId, setCategoryId] = useState(
     article?.category_id ?? "__none__",
   );
@@ -394,6 +397,7 @@ export function ArticleForm({
       content_md,
       cover_image_url: coverUrl || null,
       is_pinned: isPinned,
+      show_health_disclaimer: showHealthDisclaimer,
       category_id: categoryId === "__none__" ? null : categoryId,
       tag_ids: selectedTags,
       status: target,
@@ -422,7 +426,7 @@ export function ArticleForm({
     setStatus(target);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
-    if (target === "published" && json.slug)
+    if (mode === "create" && target === "published" && json.slug)
       router.push(`/artigo/${json.slug}`);
     else router.refresh();
   }
@@ -512,6 +516,29 @@ export function ArticleForm({
             <p className="mt-1 text-xs text-muted-foreground">
               Prioriza este artigo nas listagens, exceto ao filtrar por
               categoria ou tag.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3 rounded-md border p-3">
+          <input
+            id="f-health-disclaimer"
+            type="checkbox"
+            checked={showHealthDisclaimer}
+            onChange={(event) =>
+              setShowHealthDisclaimer(event.currentTarget.checked)
+            }
+            className="mt-1 size-4 accent-primary"
+          />
+          <div>
+            <label
+              htmlFor="f-health-disclaimer"
+              className="cursor-pointer text-sm font-medium"
+            >
+              Exibir aviso de saúde neste artigo
+            </label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              O aviso aparece antes da seção de referências, quando houver.
             </p>
           </div>
         </div>

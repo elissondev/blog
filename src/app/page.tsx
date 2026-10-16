@@ -4,8 +4,6 @@ import { ArticleListPage } from "@/components/article-list-page";
 import { HomeLoading } from "@/components/home-loading";
 import { canonicalPageUrl } from "@/lib/utils";
 
-export const dynamic = "force-dynamic";
-
 export async function generateMetadata({
   searchParams,
 }: {

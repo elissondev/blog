@@ -7,6 +7,7 @@ export type ArticleCard = {
   excerpt: string;
   cover_image_url: string | null;
   is_pinned?: boolean;
+  show_health_disclaimer?: boolean;
   published_at: string | null;
   updated_at?: string | null;
   reading_minutes: number;
@@ -39,6 +40,7 @@ export type ArticleFull = {
   content_md: string;
   cover_image_url: string | null;
   is_pinned?: boolean;
+  show_health_disclaimer?: boolean;
   status: "draft" | "published";
   published_at: string | null;
   created_at: string;

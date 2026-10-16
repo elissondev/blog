@@ -1,19 +1,34 @@
 import type { MetadataRoute } from "next";
-import { getCategories, getTags, getSitemapArticles } from "@/lib/data";
+import {
+  getAuthors,
+  getCategories,
+  getTags,
+  getSitemapArticles,
+} from "@/lib/data";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-export const dynamic = "force-dynamic";
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [articles, cats, tags] = await Promise.all([
+  const [articles, cats, tags, authors] = await Promise.all([
     getSitemapArticles(),
     getCategories(),
     getTags(),
+    getAuthors(),
   ]);
 
   return [
     { url: `${siteUrl}/`, changeFrequency: "daily", priority: 1 },
+    {
+      url: `${siteUrl}/calculadoras`,
+      changeFrequency: "yearly",
+      priority: 0.5,
+    },
+    { url: `${siteUrl}/tabelas`, changeFrequency: "yearly", priority: 0.5 },
+    ...authors.map((author) => ({
+      url: `${siteUrl}/autor/${author.slug}`,
+      changeFrequency: "weekly" as const,
+      priority: 0.5,
+    })),
     ...articles.map((article) => ({
       url: `${siteUrl}/artigo/${article.slug}`,
       ...(article.lastModified

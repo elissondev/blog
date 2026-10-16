@@ -2,8 +2,6 @@ import { ArticleListPage } from "@/components/article-list-page";
 import { Hero } from "@/components/hero";
 import type { Metadata } from "next";
 
-export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = {
   title: "Busca",
   description:

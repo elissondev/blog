@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
+import { CurrentYear } from "@/components/current-year";
 import Link from "next/link";
 import { Leaf, Rss } from "lucide-react";
 
@@ -112,8 +113,8 @@ export default function RootLayout({
               </Link>
             </nav>
             <p className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} Élisson Kario. Conteúdo educativo;
-              não substitui orientação individual de um profissional de saúde.
+              © <CurrentYear /> Élisson Kario. Conteúdo educativo; não substitui
+              orientação individual de um profissional de saúde.
             </p>
           </div>
         </footer>

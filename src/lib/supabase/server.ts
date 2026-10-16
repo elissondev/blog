@@ -4,7 +4,16 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export function isSupabaseConfigured(): boolean {
   return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
+}
+
+export function createClientPublic() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
   );
 }
 
@@ -22,14 +31,14 @@ export async function createClientServer() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, options),
             );
           } catch {
             // chamado de um Server Component — pode ignorar se houver middleware renovando sessão
           }
         },
       },
-    }
+    },
   );
 }
 
@@ -38,7 +47,7 @@ export function createAdminClient(): SupabaseClient {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } }
+    { auth: { persistSession: false, autoRefreshToken: false } },
   );
 }
 

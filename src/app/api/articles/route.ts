@@ -1,10 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { revalidatePath } from "next/cache";
 import {
   isSupabaseConfigured,
   createClientServer,
 } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
+import { CACHE_TAGS, invalidatePublicCache } from "@/lib/cache";
+
+function revalidateArticles(...slugs: string[]) {
+  invalidatePublicCache(
+    CACHE_TAGS.articles,
+    CACHE_TAGS.authors,
+    CACHE_TAGS.categories,
+    CACHE_TAGS.tags,
+    CACHE_TAGS.sitemap,
+    ...slugs.map((slug) => `article:${slug}`),
+  );
+}
 
 async function requireUser() {
   if (!isSupabaseConfigured())
@@ -48,6 +59,7 @@ export async function POST(req: NextRequest) {
       content_md: String(body.content_md ?? ""),
       cover_image_url: body.cover_image_url || null,
       is_pinned: body.is_pinned === true,
+      show_health_disclaimer: body.show_health_disclaimer === true,
       category_id: body.category_id || null,
       status: body.status === "published" ? "published" : "draft",
       reading_minutes: Number(body.reading_minutes) || 1,
@@ -72,7 +84,7 @@ export async function POST(req: NextRequest) {
       if (te) console.error("article_tags insert:", te.message);
     }
 
-    revalidatePath("/", "layout");
+    revalidateArticles(data.slug);
     return NextResponse.json({ ok: true, id: data.id, slug: data.slug });
   } catch (e) {
     return NextResponse.json(
@@ -110,10 +122,23 @@ export async function PATCH(req: NextRequest) {
       content_md: String(body.content_md ?? ""),
       cover_image_url: body.cover_image_url || null,
       is_pinned: body.is_pinned === true,
+      show_health_disclaimer: body.show_health_disclaimer === true,
       category_id: body.category_id || null,
       status: body.status === "published" ? "published" : "draft",
       reading_minutes: Number(body.reading_minutes) || 1,
     };
+
+    const { data: previous, error: previousError } = await ctx.supabase
+      .from("articles")
+      .select("slug")
+      .eq("id", id)
+      .maybeSingle();
+    if (previousError) throw previousError;
+    if (!previous)
+      return NextResponse.json(
+        { error: "Artigo não encontrado ou sem permissão." },
+        { status: 404 },
+      );
 
     const { data, error } = await ctx.supabase
       .from("articles")
@@ -138,7 +163,7 @@ export async function PATCH(req: NextRequest) {
       await ctx.supabase.from("article_tags").insert(links);
     }
 
-    revalidatePath("/", "layout");
+    revalidateArticles(previous.slug, data.slug);
     return NextResponse.json({ ok: true, id: data.id, slug: data.slug });
   } catch (e) {
     return NextResponse.json(
@@ -159,18 +184,20 @@ export async function DELETE(req: NextRequest) {
       { status: 400 },
     );
 
-  const { error, count } = await ctx.supabase
+  const { data, error } = await ctx.supabase
     .from("articles")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .select("slug")
+    .maybeSingle();
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
-  if (count === 0)
+  if (!data)
     return NextResponse.json(
       { error: "Nada excluído (sem permissão?)." },
       { status: 404 },
     );
 
-  revalidatePath("/", "layout");
+  revalidateArticles(data.slug);
   return NextResponse.json({ ok: true });
 }

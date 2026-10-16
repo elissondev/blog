@@ -61,6 +61,7 @@ create table if not exists public.articles (
   content_md text not null default '',
   cover_image_url text,
   status text not null default 'draft' check (status in ('draft','published')),
+  show_health_disclaimer boolean not null default false,
   author_id uuid not null references public.profiles(id) on delete cascade,
   category_id uuid references public.categories(id) on delete set null,
   reading_minutes int not null default 1,
@@ -72,6 +73,9 @@ create table if not exists public.articles (
 
 alter table public.articles
   add column if not exists is_pinned boolean not null default false;
+
+alter table public.articles
+  add column if not exists show_health_disclaimer boolean not null default false;
 
 create index if not exists articles_status_published_idx
   on public.articles (status, published_at desc);
