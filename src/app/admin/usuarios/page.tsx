@@ -27,7 +27,7 @@ export default async function AdminUsersPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, description, avatar_url")
+    .select("full_name, description, article_description, avatar_url")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -36,12 +36,14 @@ export default async function AdminUsersPage() {
       <div>
         <h1 className="font-serif text-2xl font-bold">Meu perfil</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Nome, descrição e foto exibidos na página pública do autor.
+          Configure nome, foto e descrições independentes para a página do autor
+          e para o final dos artigos.
         </p>
       </div>
       <ProfileManager
         fullName={profile?.full_name ?? user.user_metadata.full_name ?? ""}
         description={profile?.description ?? ""}
+        articleDescription={profile?.article_description ?? ""}
         avatarUrl={profile?.avatar_url ?? null}
       />
     </section>

@@ -17,8 +17,6 @@ export default function TabelasPage() {
         title="Tabelas"
         description="Valores de referência para consulta rápida e apoio ao estudo."
         compact
-        showActions
-        activeAction="tables"
       />
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">

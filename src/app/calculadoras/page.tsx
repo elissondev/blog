@@ -18,8 +18,6 @@ export default function CalculadorasPage() {
         title="Calculadoras"
         description="Cálculos de referência para apoiar a consulta e o estudo em nutrição."
         compact
-        showActions
-        activeAction="calculators"
       />
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">

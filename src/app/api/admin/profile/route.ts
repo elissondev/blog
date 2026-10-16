@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const fullName = String(body.full_name ?? "").trim();
     const description = String(body.description ?? "").trim();
+    const articleDescription = String(body.article_description ?? "").trim();
     const avatarUrl = body.avatar_url ? String(body.avatar_url).trim() : null;
 
     if (!fullName || fullName.length > 120) {
@@ -39,6 +40,14 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    if (articleDescription.length > 2000) {
+      return NextResponse.json(
+        {
+          error: "A descrição dos artigos deve ter no máximo 2.000 caracteres.",
+        },
+        { status: 400 },
+      );
+    }
     if (avatarUrl && !/^https:\/\//i.test(avatarUrl)) {
       return NextResponse.json(
         { error: "A foto precisa ter um endereço HTTPS válido." },
@@ -48,7 +57,12 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("profiles")
-      .update({ full_name: fullName, description, avatar_url: avatarUrl })
+      .update({
+        full_name: fullName,
+        description,
+        article_description: articleDescription,
+        avatar_url: avatarUrl,
+      })
       .eq("id", user.id)
       .select("id")
       .maybeSingle();

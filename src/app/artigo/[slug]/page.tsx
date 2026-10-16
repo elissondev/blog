@@ -2,9 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { Clock, User, Tag as TagIcon, ChevronLeft } from "lucide-react";
-import { getArticleBySlug, listArticles } from "@/lib/data";
+import {
+  Clock,
+  User,
+  Tag as TagIcon,
+  ChevronLeft,
+  Heart,
+  MessageCircle,
+} from "lucide-react";
+import { getArticleBySlug, getAuthors, listArticles } from "@/lib/data";
 import { Markdown } from "@/components/markdown";
+import { ExpandableText } from "@/components/expandable-text";
 import { ArticleCardComponent } from "@/components/article-card";
 import { Badge } from "@/components/ui/badge";
 import { authorDisplayName, formatDate, authorSlug } from "@/lib/utils";
@@ -50,14 +58,19 @@ export default async function ArticlePage({ params }: Props) {
   const article = await getArticleBySlug(slug);
   if (!article) notFound();
 
-  const related = (
-    await listArticles({
+  const [relatedResult, authors] = await Promise.all([
+    listArticles({
       category: article.category_slug,
       perPageHack: undefined,
-    } as never)
-  ).articles
+    } as never),
+    getAuthors(),
+  ]);
+  const related = relatedResult.articles
     .filter((a) => a.slug !== article.slug)
     .slice(0, 3);
+  const author = authors.find(
+    (item) => item.slug === authorSlug(article.author_name),
+  );
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -156,6 +169,80 @@ export default async function ArticlePage({ params }: Props) {
         )}
 
         <Markdown content={article.content_md} />
+
+        <section className="mt-12 border-t pt-8" aria-labelledby="sobre-autor">
+          <h2 id="sobre-autor" className="mb-4 font-serif text-2xl font-bold">
+            Sobre o autor
+          </h2>
+          <div className="flex items-start gap-4">
+            {author?.avatar_url ? (
+              <Image
+                src={author.avatar_url}
+                alt={`Foto de ${author.name}`}
+                width={72}
+                height={72}
+                className="size-18 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <span className="flex size-18 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <User className="size-8" aria-hidden="true" />
+              </span>
+            )}
+            <div className="min-w-0">
+              <Link
+                href={`/autor/${authorSlug(article.author_name)}`}
+                className="font-semibold text-foreground hover:text-primary"
+              >
+                {author?.name || authorDisplayName(article.author_name)}
+              </Link>
+              <ExpandableText
+                text={
+                  author?.article_description ||
+                  `Acompanhe outros artigos publicados por ${authorDisplayName(article.author_name)}.`
+                }
+                className="mt-1 text-sm leading-relaxed text-muted-foreground"
+                buttonClassName="text-primary hover:underline focus-visible:outline-primary"
+              />
+              <Link
+                href={`/autor/${authorSlug(article.author_name)}`}
+                className="mt-3 inline-flex text-sm font-medium text-primary hover:underline"
+              >
+                Ver artigos do autor
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section
+          className="mt-8 rounded-lg border bg-card p-5"
+          aria-labelledby="article-donation-heading"
+        >
+          <h2
+            id="article-donation-heading"
+            className="flex items-center gap-2 font-serif text-xl font-bold"
+          >
+            <Heart className="size-5 text-primary" aria-hidden="true" />
+            Apoie este trabalho
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Este blog é mantido de forma 100% independente, livre de patrocínios
+            da indústria ou narrativas da mídia. Se este conteúdo foi útil e
+            você quer ajudar a financiar a busca por informação objetiva,
+            considere fazer uma doação. Produzir artigos aprofundados e testados
+            na prática exige dezenas de horas de pesquisa e investigação. Sua
+            contribuição ajuda a manter este site no ar e me permite dedicar
+            mais tempo a trazer a verdade à tona.
+          </p>
+          <Link
+            href={`https://wa.me/5542999355018?text=${encodeURIComponent("Olá Élisson, gostaria de contribuir com seu site doando uma quantia para você.")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            <MessageCircle className="size-4" aria-hidden="true" />
+            Falar sobre doação
+          </Link>
+        </section>
       </article>
 
       {related.length > 0 && (

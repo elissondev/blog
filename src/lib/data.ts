@@ -196,6 +196,7 @@ export async function getAuthors(): Promise<
     filterSlug: string;
     count: number;
     description: string | null;
+    article_description: string | null;
     avatar_url: string | null;
   }[]
 > {
@@ -209,6 +210,7 @@ export async function getAuthors(): Promise<
       filterSlug: authorFilterSlug(name),
       count,
       description: null,
+      article_description: null,
       avatar_url: null,
     }));
   }
@@ -216,7 +218,9 @@ export async function getAuthors(): Promise<
   const supabase = await createClientServer();
   const { data } = await supabase
     .from("articles")
-    .select("author_id, profiles(full_name, description, avatar_url)")
+    .select(
+      "author_id, profiles(full_name, description, article_description, avatar_url)",
+    )
     .eq("status", "published");
   const map = new Map<
     string,
@@ -224,6 +228,7 @@ export async function getAuthors(): Promise<
       name: string;
       count: number;
       description: string | null;
+      article_description: string | null;
       avatar_url: string | null;
     }
   >();
@@ -233,6 +238,7 @@ export async function getAuthors(): Promise<
         profiles: {
           full_name: string;
           description: string | null;
+          article_description: string | null;
           avatar_url: string | null;
         } | null;
       }
@@ -242,6 +248,7 @@ export async function getAuthors(): Promise<
       name: p.full_name,
       count: 0,
       description: p.description,
+      article_description: p.article_description,
       avatar_url: p.avatar_url,
     };
     cur.count += 1;

@@ -10,14 +10,19 @@ import { Textarea } from "@/components/ui/textarea";
 export function ProfileManager({
   fullName: initialName,
   description: initialDescription,
+  articleDescription: initialArticleDescription,
   avatarUrl: initialAvatarUrl,
 }: {
   fullName: string;
   description: string;
+  articleDescription: string;
   avatarUrl: string | null;
 }) {
   const [fullName, setFullName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
+  const [articleDescription, setArticleDescription] = useState(
+    initialArticleDescription,
+  );
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -63,6 +68,7 @@ export function ProfileManager({
         body: JSON.stringify({
           full_name: fullName,
           description,
+          article_description: articleDescription,
           avatar_url: avatarUrl,
         }),
       });
@@ -151,7 +157,7 @@ export function ProfileManager({
 
       <div className="space-y-2">
         <label htmlFor="profile-description" className="text-sm font-medium">
-          Sobre mim
+          Descrição da página do autor
         </label>
         <Textarea
           id="profile-description"
@@ -163,6 +169,26 @@ export function ProfileManager({
         />
         <p className="text-right text-xs text-muted-foreground">
           {description.length}/2000
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label
+          htmlFor="profile-article-description"
+          className="text-sm font-medium"
+        >
+          Descrição exibida abaixo dos artigos
+        </label>
+        <Textarea
+          id="profile-article-description"
+          value={articleDescription}
+          onChange={(event) => setArticleDescription(event.currentTarget.value)}
+          rows={5}
+          maxLength={2000}
+          placeholder="Escreva uma apresentação para o rodapé dos artigos."
+        />
+        <p className="text-right text-xs text-muted-foreground">
+          {articleDescription.length}/2000
         </p>
       </div>
 

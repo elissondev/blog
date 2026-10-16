@@ -53,7 +53,6 @@ export default async function AuthorPage({ params, searchParams }: Props) {
         avatarUrl={author.avatar_url}
         badgeText="Autor"
         expandableDescription
-        showActions={false}
       />
       <ArticleListPage
         searchParams={merged}

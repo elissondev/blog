@@ -8,6 +8,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null default '',
   description text not null default '',
+  article_description text not null default '',
   avatar_url text,
   role text not null default 'author' check (role in ('admin','author')),
   created_at timestamptz not null default now()
@@ -15,6 +16,9 @@ create table if not exists public.profiles (
 
 alter table public.profiles
   add column if not exists description text not null default '';
+
+alter table public.profiles
+  add column if not exists article_description text not null default '';
 
 -- ---------- Citações inspiradoras ----------
 create table if not exists public.quotes (
