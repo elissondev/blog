@@ -35,6 +35,9 @@ export const metadata: Metadata = {
     "evidências",
   ],
   authors: [{ name: "Élisson Kario" }],
+  verification: {
+    google: "ZwqT0aOlZBFzZ8j9YHqRIWBzHWI7P8c1NTwoaOJN0G4",
+  },
   openGraph: {
     type: "website",
     siteName: "Élisson Kario",
