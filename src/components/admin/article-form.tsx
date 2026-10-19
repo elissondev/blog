@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import ImageExtension from "@tiptap/extension-image";
@@ -36,6 +36,10 @@ import {
   X,
   TableProperties,
   Languages,
+  Plus,
+  Settings2,
+  ChevronDown,
+  Upload,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -270,11 +274,13 @@ function TBtn({
   onClick,
   active,
   label,
+  disabled,
   children,
 }: {
   onClick: () => void;
   active?: boolean;
   label: string;
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -282,9 +288,10 @@ function TBtn({
       type="button"
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
+      disabled={disabled}
       aria-label={label}
       title={label}
-      className={`flex size-8 items-center justify-center rounded-md text-sm transition-colors ${active ? "bg-primary text-primary-foreground" : "hover:bg-accent text-muted-foreground hover:text-foreground"}`}
+      className={`flex size-8 items-center justify-center rounded-md text-sm transition-colors disabled:pointer-events-none disabled:opacity-50 ${active ? "bg-primary text-primary-foreground" : "hover:bg-accent text-muted-foreground hover:text-foreground"}`}
     >
       {children}
     </button>
@@ -315,8 +322,9 @@ export function ArticleForm({
   const [coverUrl, setCoverUrl] = useState(article?.cover_image_url ?? "");
   const [isPinned, setIsPinned] = useState(article?.is_pinned ?? false);
   const [showHealthDisclaimer, setShowHealthDisclaimer] = useState(
-    article?.show_health_disclaimer ?? false,
+    article?.show_health_disclaimer ?? true,
   );
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [categoryId, setCategoryId] = useState(
     article?.category_id ?? "__none__",
   );
@@ -325,6 +333,16 @@ export function ArticleForm({
       ? initialTagIds
       : (article?.article_tags ?? []).map((x: { tags: Tag }) => x.tags.id),
   );
+  const [categoryOptions, setCategoryOptions] = useState(categories);
+  const [tagOptions, setTagOptions] = useState(tags);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [showTagForm, setShowTagForm] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newTagName, setNewTagName] = useState("");
+  const [savingTaxonomy, setSavingTaxonomy] = useState<
+    "category" | "tag" | null
+  >(null);
+  const [taxonomyError, setTaxonomyError] = useState<string | null>(null);
   const [status, setStatus] = useState<"draft" | "published">(
     article?.status ?? "draft",
   );
@@ -335,7 +353,11 @@ export function ArticleForm({
   const [saving, setSaving] = useState<"draft" | "published" | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingTarget, setUploadingTarget] = useState<
+    "cover" | "editor" | null
+  >(null);
+  const editorImageInputRef = useRef<HTMLInputElement>(null);
+  const editorImagePosition = useRef<number | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -374,8 +396,8 @@ export function ArticleForm({
       .run();
   }, [editor, title]);
 
-  async function uploadFile(file: File) {
-    setUploading(true);
+  async function uploadFile(file: File, target: "cover" | "editor") {
+    setUploadingTarget(target);
     try {
       const fd = new FormData();
       fd.append("file", file);
@@ -385,16 +407,65 @@ export function ArticleForm({
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Falha no upload");
-      if (editor)
+      if (target === "cover") {
+        setCoverUrl(json.url);
+      } else if (editor) {
         editor
           .chain()
           .focus()
+          .setTextSelection(
+            editorImagePosition.current ?? editor.state.selection.from,
+          )
           .setImage({ src: json.url, alt: file.name })
           .run();
+        editorImagePosition.current = null;
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setUploading(false);
+      setUploadingTarget(null);
+    }
+  }
+
+  function chooseEditorImage() {
+    if (!editor || uploadingTarget) return;
+    editorImagePosition.current = editor.state.selection.from;
+    editorImageInputRef.current?.click();
+  }
+
+  async function createTaxonomy(kind: "category" | "tag") {
+    const name = (kind === "category" ? newCategoryName : newTagName).trim();
+    if (!name) return;
+
+    setSavingTaxonomy(kind);
+    setTaxonomyError(null);
+    try {
+      const res = await fetch("/api/admin/taxonomies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind, name }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error ?? "Não foi possível criar.");
+
+      if (kind === "category") {
+        setCategoryOptions((previous) => [
+          ...previous,
+          { id: json.id, name, slug: slugify(name) },
+        ]);
+        setCategoryId(json.id);
+        setNewCategoryName("");
+        setShowCategoryForm(false);
+      } else {
+        setTagOptions((previous) => [...previous, { id: json.id, name }]);
+        setSelectedTags((previous) => [...previous, json.id]);
+        setNewTagName("");
+        setShowTagForm(false);
+      }
+    } catch (e) {
+      setTaxonomyError((e as Error).message);
+    } finally {
+      setSavingTaxonomy(null);
     }
   }
 
@@ -452,20 +523,87 @@ export function ArticleForm({
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-24">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="font-serif text-2xl font-bold">
           {mode === "edit" ? "Editar artigo" : "Novo artigo"}
         </h1>
-        {article?.slug && article.status === "published" && (
-          <Button variant="outline" size="sm" asChild>
-            <Link
-              href={articlePath(languageCode, article.slug)}
-              target="_blank"
-            >
-              Ver público ↗
-            </Link>
+        <div className="relative flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-expanded={settingsOpen}
+            aria-controls="article-settings"
+            onClick={() => setSettingsOpen((open) => !open)}
+          >
+            <Settings2 className="size-4" />
+            Configurações
+            <ChevronDown
+              className={`size-4 transition-transform ${settingsOpen ? "rotate-180" : ""}`}
+            />
           </Button>
-        )}
+          {article?.slug && article.status === "published" && (
+            <Button variant="outline" size="sm" asChild>
+              <Link
+                href={articlePath(languageCode, article.slug)}
+                target="_blank"
+              >
+                Ver público ↗
+              </Link>
+            </Button>
+          )}
+          {settingsOpen && (
+            <div
+              id="article-settings"
+              className="absolute right-0 top-full z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] space-y-4 rounded-md border bg-card p-4 shadow-lg"
+            >
+              <div className="flex items-start gap-3">
+                <input
+                  id="f-pinned"
+                  type="checkbox"
+                  checked={isPinned}
+                  onChange={(event) => setIsPinned(event.target.checked)}
+                  className="mt-1 size-4 accent-primary"
+                />
+                <div>
+                  <label
+                    htmlFor="f-pinned"
+                    className="flex cursor-pointer items-center gap-2 text-sm font-medium"
+                  >
+                    <Pin className="size-4" /> Fixar no topo
+                  </label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Prioriza este artigo nas listagens, exceto ao filtrar por
+                    categoria ou tag.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 border-t pt-4">
+                <input
+                  id="f-health-disclaimer"
+                  type="checkbox"
+                  checked={showHealthDisclaimer}
+                  onChange={(event) =>
+                    setShowHealthDisclaimer(event.currentTarget.checked)
+                  }
+                  className="mt-1 size-4 accent-primary"
+                />
+                <div>
+                  <label
+                    htmlFor="f-health-disclaimer"
+                    className="cursor-pointer text-sm font-medium"
+                  >
+                    Exibir aviso de saúde neste artigo
+                  </label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    O aviso aparece antes da seção de referências, quando
+                    houver.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {mode === "edit" && article && (
@@ -550,64 +688,79 @@ export function ArticleForm({
           </div>
           <div>
             <Label htmlFor="f-cat">Categoria</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger id="f-cat" className="mt-1.5">
-                <SelectValue placeholder="Sem categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Sem categoria</SelectItem>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="flex items-start gap-3 rounded-md border p-3">
-          <input
-            id="f-pinned"
-            type="checkbox"
-            checked={isPinned}
-            onChange={(event) => setIsPinned(event.target.checked)}
-            className="mt-1 size-4 accent-primary"
-          />
-          <div>
-            <label
-              htmlFor="f-pinned"
-              className="flex cursor-pointer items-center gap-2 text-sm font-medium"
-            >
-              <Pin className="size-4" /> Fixar no topo
-            </label>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Prioriza este artigo nas listagens, exceto ao filtrar por
-              categoria ou tag.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-start gap-3 rounded-md border p-3">
-          <input
-            id="f-health-disclaimer"
-            type="checkbox"
-            checked={showHealthDisclaimer}
-            onChange={(event) =>
-              setShowHealthDisclaimer(event.currentTarget.checked)
-            }
-            className="mt-1 size-4 accent-primary"
-          />
-          <div>
-            <label
-              htmlFor="f-health-disclaimer"
-              className="cursor-pointer text-sm font-medium"
-            >
-              Exibir aviso de saúde neste artigo
-            </label>
-            <p className="mt-1 text-xs text-muted-foreground">
-              O aviso aparece antes da seção de referências, quando houver.
-            </p>
+            <div className="mt-1.5 flex items-center gap-2">
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger id="f-cat" className="flex-1">
+                  <SelectValue placeholder="Sem categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sem categoria</SelectItem>
+                  {categoryOptions.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9"
+                onClick={() => {
+                  setShowCategoryForm((visible) => !visible);
+                  setTaxonomyError(null);
+                }}
+              >
+                <Plus className="size-4" /> Nova
+              </Button>
+            </div>
+            {showCategoryForm && (
+              <form
+                className="mt-2 space-y-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void createTaxonomy("category");
+                }}
+              >
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    aria-label="Nome da nova categoria"
+                    value={newCategoryName}
+                    onChange={(event) => setNewCategoryName(event.target.value)}
+                    placeholder="Nome da categoria"
+                    maxLength={80}
+                    required
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={
+                      !newCategoryName.trim() || savingTaxonomy !== null
+                    }
+                  >
+                    {savingTaxonomy === "category" ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      "Criar"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCategoryForm(false)}
+                    disabled={savingTaxonomy !== null}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+                {taxonomyError && (
+                  <p className="text-sm text-destructive">{taxonomyError}</p>
+                )}
+              </form>
+            )}
           </div>
         </div>
 
@@ -638,7 +791,7 @@ export function ArticleForm({
               placeholder="https://… ou faça upload ao lado"
             />
             <label className="flex cursor-pointer items-center gap-2 rounded-md border px-3 text-sm hover:bg-accent">
-              {uploading ? (
+              {uploadingTarget === "cover" ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <ImageIcon className="size-4" />
@@ -650,7 +803,7 @@ export function ArticleForm({
                 className="sr-only"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f) uploadFile(f);
+                  if (f) void uploadFile(f, "cover");
                   e.currentTarget.value = "";
                 }}
               />
@@ -667,9 +820,66 @@ export function ArticleForm({
         </div>
 
         <div>
-          <Label>Tags</Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label>Tags</Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setShowTagForm((visible) => !visible);
+                setTaxonomyError(null);
+              }}
+            >
+              <Plus className="size-4" /> Nova
+            </Button>
+          </div>
+          {showTagForm && (
+            <form
+              className="mt-2 space-y-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void createTaxonomy("tag");
+              }}
+            >
+              <div className="flex gap-2">
+                <Input
+                  autoFocus
+                  aria-label="Nome da nova tag"
+                  value={newTagName}
+                  onChange={(event) => setNewTagName(event.target.value)}
+                  placeholder="Nome da tag"
+                  maxLength={80}
+                  required
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!newTagName.trim() || savingTaxonomy !== null}
+                >
+                  {savingTaxonomy === "tag" ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    "Criar"
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowTagForm(false)}
+                  disabled={savingTaxonomy !== null}
+                >
+                  Cancelar
+                </Button>
+              </div>
+              {taxonomyError && (
+                <p className="text-sm text-destructive">{taxonomyError}</p>
+              )}
+            </form>
+          )}
           <div className="mt-2 flex flex-wrap gap-2">
-            {tags.map((t) => {
+            {tagOptions.map((t) => {
               const on = selectedTags.includes(t.id);
               return (
                 <button
@@ -818,6 +1028,29 @@ export function ArticleForm({
           <TBtn label="Inserir imagem" onClick={uploadImage}>
             <ImageIcon className="size-4" />
           </TBtn>
+          <TBtn
+            label="Enviar imagem para o artigo"
+            onClick={chooseEditorImage}
+            disabled={uploadingTarget !== null}
+          >
+            {uploadingTarget === "editor" ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Upload className="size-4" />
+            )}
+          </TBtn>
+          <input
+            ref={editorImageInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            aria-label="Selecionar imagem para o artigo"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              if (file) void uploadFile(file, "editor");
+              event.currentTarget.value = "";
+            }}
+          />
           <span className="mx-1 h-6 w-px bg-border" aria-hidden />
           <TBtn
             label="Desfazer"
