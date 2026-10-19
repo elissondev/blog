@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { ArticleCard } from "@/lib/types";
 import { DeleteArticleButton } from "@/components/admin/delete-article-button";
+import { articlePath, type ArticleLanguage } from "@/lib/locales";
 
 type Row = Pick<
   ArticleCard,
@@ -20,7 +21,7 @@ type Row = Pick<
   | "category_name"
   | "author_name"
   | "is_pinned"
-> & { status: "draft" | "published" };
+> & { status: "draft" | "published"; language_code: ArticleLanguage };
 
 export default async function AdminDashboardPage() {
   let rows: Row[] = [];
@@ -35,6 +36,7 @@ export default async function AdminDashboardPage() {
       category_name: a.category_name,
       author_name: a.author_name,
       is_pinned: a.is_pinned ?? false,
+      language_code: "pt-BR" as const,
       status: "published" as const,
     }));
     counts = { total: rows.length, published: rows.length, drafts: 0 };
@@ -43,7 +45,7 @@ export default async function AdminDashboardPage() {
     const { data } = await supabase
       .from("articles")
       .select(
-        "id,title,slug,status,published_at,is_pinned,category_id,categories(name),author_id,profiles(full_name)",
+        "id,title,slug,status,published_at,is_pinned,language_code,category_id,categories(name),author_id,profiles(full_name)",
       )
       .order("updated_at", { ascending: false })
       .limit(200);
@@ -60,6 +62,7 @@ export default async function AdminDashboardPage() {
         category_name: cat?.name ?? null,
         author_name: prof?.full_name ?? "—",
         is_pinned: r.is_pinned ?? false,
+        language_code: r.language_code as ArticleLanguage,
         status: r.status as "draft" | "published",
       };
     });
@@ -145,9 +148,12 @@ export default async function AdminDashboardPage() {
                     >
                       {r.title}
                     </Link>
+                    <Badge variant="outline" className="shrink-0 text-[10px]">
+                      {r.language_code}
+                    </Badge>
                   </div>
                   <p className="truncate text-xs text-muted-foreground">
-                    /artigo/{r.slug}
+                    {articlePath(r.language_code, r.slug)}
                   </p>
                 </td>
                 <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">
@@ -197,7 +203,10 @@ export default async function AdminDashboardPage() {
                         asChild
                         aria-label={`Ver ${r.title}`}
                       >
-                        <Link href={`/artigo/${r.slug}`} target="_blank">
+                        <Link
+                          href={articlePath(r.language_code, r.slug)}
+                          target="_blank"
+                        >
                           <ExternalLink className="size-4" />
                         </Link>
                       </Button>

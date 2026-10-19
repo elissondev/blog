@@ -5,6 +5,7 @@ import {
 } from "@/lib/supabase/server";
 import { slugify } from "@/lib/utils";
 import { CACHE_TAGS, invalidatePublicCache } from "@/lib/cache";
+import { isArticleLanguage } from "@/lib/locales";
 
 function revalidateArticles(...slugs: string[]) {
   invalidatePublicCache(
@@ -45,16 +46,53 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const title = String(body.title ?? "").trim();
     const excerpt = String(body.excerpt ?? "").trim();
+    const languageCode = String(body.language_code ?? "pt-BR");
+    const translationGroupId = String(body.translation_group_id ?? "").trim();
     if (!title || !excerpt)
       return NextResponse.json(
         { error: "Título e resumo são obrigatórios." },
         { status: 400 },
       );
+    if (!isArticleLanguage(languageCode))
+      return NextResponse.json({ error: "Idioma inválido." }, { status: 400 });
+
+    if (translationGroupId) {
+      const { data: source, error: sourceError } = await ctx.supabase
+        .from("articles")
+        .select("id")
+        .eq("translation_group_id", translationGroupId)
+        .eq("author_id", ctx.user.id)
+        .limit(1)
+        .maybeSingle();
+      if (sourceError) throw sourceError;
+      if (!source)
+        return NextResponse.json(
+          { error: "Artigo de origem não encontrado ou sem permissão." },
+          { status: 404 },
+        );
+
+      const { data: existing, error: existingError } = await ctx.supabase
+        .from("articles")
+        .select("id")
+        .eq("translation_group_id", translationGroupId)
+        .eq("language_code", languageCode)
+        .maybeSingle();
+      if (existingError) throw existingError;
+      if (existing)
+        return NextResponse.json(
+          { error: "Já existe uma versão nesse idioma para este artigo." },
+          { status: 409 },
+        );
+    }
 
     const slug = slugify(String(body.slug ?? "")) || slugify(title);
     const record = {
       title,
       slug,
+      language_code: languageCode,
+      ...(translationGroupId
+        ? { translation_group_id: translationGroupId }
+        : {}),
       excerpt,
       content_md: String(body.content_md ?? ""),
       cover_image_url: body.cover_image_url || null,
@@ -130,7 +168,7 @@ export async function PATCH(req: NextRequest) {
 
     const { data: previous, error: previousError } = await ctx.supabase
       .from("articles")
-      .select("slug")
+      .select("slug,translation_group_id")
       .eq("id", id)
       .maybeSingle();
     if (previousError) throw previousError;
@@ -164,6 +202,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     revalidateArticles(previous.slug, data.slug);
+    invalidatePublicCache(`translation-group:${previous.translation_group_id}`);
     return NextResponse.json({ ok: true, id: data.id, slug: data.slug });
   } catch (e) {
     return NextResponse.json(
@@ -188,7 +227,7 @@ export async function DELETE(req: NextRequest) {
     .from("articles")
     .delete()
     .eq("id", id)
-    .select("slug")
+    .select("slug,translation_group_id")
     .maybeSingle();
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -199,5 +238,6 @@ export async function DELETE(req: NextRequest) {
     );
 
   revalidateArticles(data.slug);
+  invalidatePublicCache(`translation-group:${data.translation_group_id}`);
   return NextResponse.json({ ok: true });
 }

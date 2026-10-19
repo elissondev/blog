@@ -12,7 +12,7 @@ import {
   isSupabaseConfigured,
   createClientServer,
 } from "@/lib/supabase/server";
-import { logoutAction } from "@/app/admin/login/actions";
+import { logoutAction } from "@/app/(pt)/admin/login/actions";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 

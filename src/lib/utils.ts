@@ -17,9 +17,12 @@ export function slugify(text: string): string {
     .replace(/-+/g, "-");
 }
 
-export function formatDate(iso: string | null | undefined): string {
+export function formatDate(
+  iso: string | null | undefined,
+  locale = "pt-BR",
+): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleDateString("pt-BR", {
+  return new Date(iso).toLocaleDateString(locale, {
     day: "2-digit",
     month: "long",
     year: "numeric",

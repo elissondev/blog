@@ -56,7 +56,10 @@ create table if not exists public.tags (
 create table if not exists public.articles (
   id uuid primary key default gen_random_uuid(),
   title text not null,
-  slug text not null unique,
+  slug text not null,
+  language_code text not null default 'pt-BR'
+    constraint articles_language_code_check check (language_code in ('pt-BR','en','es')),
+  translation_group_id uuid not null default gen_random_uuid(),
   excerpt text not null default '',
   content_md text not null default '',
   cover_image_url text,
@@ -68,7 +71,9 @@ create table if not exists public.articles (
   published_at timestamptz,
   is_pinned boolean not null default false,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint articles_language_slug_key unique (language_code, slug),
+  constraint articles_translation_language_key unique (translation_group_id, language_code)
 );
 
 alter table public.articles
@@ -80,7 +85,34 @@ alter table public.articles
 create index if not exists articles_status_published_idx
   on public.articles (status, published_at desc);
 create index if not exists articles_search_idx
-  on public.articles using gin (to_tsvector('portuguese', coalesce(title,'') || ' ' || coalesce(excerpt,'') || ' ' || coalesce(content_md,'')));
+  on public.articles using gin (to_tsvector('portuguese', coalesce(title,'') || ' ' || coalesce(excerpt,'') || ' ' || coalesce(content_md,'')))
+  where language_code = 'pt-BR';
+create index if not exists articles_search_en_idx
+  on public.articles using gin (to_tsvector('english', coalesce(title,'') || ' ' || coalesce(excerpt,'') || ' ' || coalesce(content_md,'')))
+  where language_code = 'en';
+create index if not exists articles_search_es_idx
+  on public.articles using gin (to_tsvector('spanish', coalesce(title,'') || ' ' || coalesce(excerpt,'') || ' ' || coalesce(content_md,'')))
+  where language_code = 'es';
+create index if not exists articles_translation_group_idx
+  on public.articles (translation_group_id, language_code, status);
+
+create or replace function public.ensure_translation_group_author()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if exists (
+    select 1 from public.articles a
+    where a.translation_group_id = new.translation_group_id
+      and a.author_id <> new.author_id
+  ) then
+    raise exception 'Translation group must belong to the same author';
+  end if;
+  return new;
+end; $$;
+
+drop trigger if exists articles_translation_group_author on public.articles;
+create trigger articles_translation_group_author
+  before insert or update of translation_group_id, author_id on public.articles
+  for each row execute function public.ensure_translation_group_author();
 
 -- ---------- Junção artigo <-> tags ----------
 create table if not exists public.article_tags (
@@ -134,7 +166,8 @@ create or replace function public.search_articles(
   p_author_slug text default null,
   p_sort text default 'recent',
   p_page int default 1,
-  p_per_page int default 9
+  p_per_page int default 9,
+  p_language_code text default 'pt-BR'
 ) returns table (
   id uuid, title text, slug text, excerpt text, cover_image_url text,
   published_at timestamptz, is_pinned boolean, reading_minutes int,
@@ -152,20 +185,38 @@ create or replace function public.search_articles(
          from article_tags at2 join tags t on t.id = at2.tag_id
          where at2.article_id = a.id), '[]'::json) as tags,
       count(*) over() as total_count,
-      to_tsvector('portuguese', coalesce(a.title,'') || ' ' || coalesce(a.excerpt,'')) as ts_head
+      to_tsvector(
+        case a.language_code
+          when 'en' then 'english'::regconfig
+          when 'es' then 'spanish'::regconfig
+          else 'portuguese'::regconfig
+        end,
+        coalesce(a.title,'') || ' ' || coalesce(a.excerpt,'')) as ts_head
     from articles a
     join profiles p on p.id = a.author_id
     left join categories c on c.id = a.category_id
     where a.status = 'published'
+      and a.language_code = p_language_code
       and (p_category_slug is null or c.slug = p_category_slug)
       and (p_tag_slug     is null or exists (
              select 1 from article_tags at3 join tags t3 on t3.id = at3.tag_id
              where at3.article_id = a.id and t3.slug = p_tag_slug))
       and (p_author_slug  is null or lower(replace(p.full_name,' ','-')) = p_author_slug)
       and (p_q is null or (
-             to_tsvector('portuguese',
+             to_tsvector(
+               case a.language_code
+                 when 'en' then 'english'::regconfig
+                 when 'es' then 'spanish'::regconfig
+                 else 'portuguese'::regconfig
+               end,
                coalesce(a.title,'') || ' ' || coalesce(a.excerpt,'') || ' ' || coalesce(a.content_md,''))
-               @@ websearch_to_tsquery('portuguese', p_q)
+               @@ websearch_to_tsquery(
+                 case a.language_code
+                   when 'en' then 'english'::regconfig
+                   when 'es' then 'spanish'::regconfig
+                   else 'portuguese'::regconfig
+                 end,
+                 p_q)
              or a.title ilike '%' || p_q || '%'
            ))
   )
@@ -178,7 +229,15 @@ create or replace function public.search_articles(
     case when p_sort = 'title'   then lower(title)  end asc,
     case when p_sort = 'recent'  then published_at  end desc nulls last,
     case when p_sort = 'relevance' and p_q is not null
-         then ts_rank(ts_head, websearch_to_tsquery('portuguese', p_q)) end desc nulls last
+         then ts_rank(
+           ts_head,
+           websearch_to_tsquery(
+             case p_language_code
+               when 'en' then 'english'::regconfig
+               when 'es' then 'spanish'::regconfig
+               else 'portuguese'::regconfig
+             end,
+             p_q)) end desc nulls last
   offset (greatest(p_page,1)-1) * p_per_page
   limit p_per_page;
 $$;

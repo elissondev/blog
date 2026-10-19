@@ -10,13 +10,20 @@ import {
   Heart,
   MessageCircle,
   TriangleAlert,
+  Languages,
 } from "lucide-react";
-import { getArticleBySlug, getAuthors, listArticles } from "@/lib/data";
+import {
+  getArticleBySlug,
+  getAuthors,
+  getPublishedTranslations,
+  listArticles,
+} from "@/lib/data";
 import { hasReferencesSection, Markdown } from "@/components/markdown";
 import { ExpandableText } from "@/components/expandable-text";
 import { ArticleCardComponent } from "@/components/article-card";
 import { Badge } from "@/components/ui/badge";
 import { authorDisplayName, formatDate, authorSlug } from "@/lib/utils";
+import { articlePath, LOCALE_CONFIG } from "@/lib/locales";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -27,13 +34,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await getArticleBySlug(slug);
   if (!article) return { title: "Artigo não encontrado" };
 
-  const url = `/artigo/${article.slug}`;
+  const url = articlePath("pt-BR", article.slug);
+  const translations = await getPublishedTranslations(
+    article.translation_group_id,
+  );
+  const languages = Object.fromEntries(
+    translations.map((translation) => [
+      translation.language_code,
+      articlePath(translation.language_code, translation.slug),
+    ]),
+  );
+  languages["x-default"] = url;
   return {
     title: article.title,
     description: article.excerpt,
     keywords: article.tags.map((t) => t.name),
     authors: [{ name: authorDisplayName(article.author_name) }],
-    alternates: { canonical: url },
+    alternates: { canonical: url, languages },
     openGraph: {
       type: "article",
       title: article.title,
@@ -59,12 +76,13 @@ export default async function ArticlePage({ params }: Props) {
   const article = await getArticleBySlug(slug);
   if (!article) notFound();
 
-  const [relatedResult, authors] = await Promise.all([
+  const [relatedResult, authors, translations] = await Promise.all([
     listArticles({
       category: article.category_slug,
       perPageHack: undefined,
     } as never),
     getAuthors(),
+    getPublishedTranslations(article.translation_group_id),
   ]);
   const related = relatedResult.articles
     .filter((a) => a.slug !== article.slug)
@@ -148,6 +166,34 @@ export default async function ArticlePage({ params }: Props) {
             ))}
           </div>
 
+          {translations.length > 1 && (
+            <nav
+              aria-label="Idiomas disponíveis"
+              className="mb-5 flex flex-wrap items-center gap-2 text-sm"
+            >
+              <Languages
+                className="size-4 text-muted-foreground"
+                aria-hidden="true"
+              />
+              {translations.map((translation) => (
+                <Link
+                  key={translation.language_code}
+                  href={articlePath(
+                    translation.language_code,
+                    translation.slug,
+                  )}
+                  hrefLang={LOCALE_CONFIG[translation.language_code].htmlLang}
+                  aria-current={
+                    translation.language_code === "pt-BR" ? "page" : undefined
+                  }
+                  className="underline-offset-4 hover:underline aria-[current=page]:font-semibold"
+                >
+                  {LOCALE_CONFIG[translation.language_code].label}
+                </Link>
+              ))}
+            </nav>
+          )}
+
           <h1 className="font-serif text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
             {article.title}
           </h1>
@@ -176,7 +222,7 @@ export default async function ArticlePage({ params }: Props) {
         </header>
 
         {article.cover_image_url && (
-          <div className="relative mb-10 aspect-[21/9] overflow-hidden rounded-xl bg-muted">
+          <div className="relative mb-10 aspect-21/9 overflow-hidden rounded-xl bg-muted">
             <Image
               src={article.cover_image_url}
               alt={article.title}

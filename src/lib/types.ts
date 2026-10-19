@@ -1,3 +1,5 @@
+import type { ArticleLanguage } from "./locales";
+
 export type PostTag = { name: string; slug: string };
 
 export type ArticleCard = {
@@ -34,6 +36,8 @@ export type InspirationalQuote = {
 
 export type ArticleFull = {
   id: string;
+  language_code?: ArticleLanguage;
+  translation_group_id?: string;
   title: string;
   slug: string;
   excerpt: string;

@@ -35,6 +35,7 @@ import {
   Pin,
   X,
   TableProperties,
+  Languages,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -52,6 +53,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { slugify, readingTime } from "@/lib/utils";
+import {
+  articlePath,
+  isArticleLanguage,
+  LOCALE_CONFIG,
+  type ArticleLanguage,
+} from "@/lib/locales";
 import type { ArticleFull, Category, Tag } from "@/lib/types";
 
 /* ---------- Conversão TipTap <-> Markdown (subconjunto GFM) ---------- */
@@ -289,12 +296,16 @@ export function ArticleForm({
   categories,
   tags,
   initialTagIds = [],
+  initialLanguage = "pt-BR",
+  translationGroupId,
   mode,
 }: {
   article?: ArticleFull;
   categories: Pick<Category, "id" | "name" | "slug">[];
   tags: Pick<Tag, "id" | "name">[];
   initialTagIds?: string[];
+  initialLanguage?: ArticleLanguage;
+  translationGroupId?: string | null;
   mode: "create" | "edit";
 }) {
   const router = useRouter();
@@ -316,6 +327,9 @@ export function ArticleForm({
   );
   const [status, setStatus] = useState<"draft" | "published">(
     article?.status ?? "draft",
+  );
+  const [languageCode, setLanguageCode] = useState<ArticleLanguage>(
+    article?.language_code ?? initialLanguage,
   );
   const [preview, setPreview] = useState(false);
   const [saving, setSaving] = useState<"draft" | "published" | null>(null);
@@ -391,6 +405,9 @@ export function ArticleForm({
     const content_md = docToMd(editor.getJSON());
     const payload = {
       id: article?.id,
+      language_code: languageCode,
+      translation_group_id:
+        translationGroupId ?? article?.translation_group_id ?? null,
       title,
       slug: slug || slugify(title),
       excerpt,
@@ -427,7 +444,7 @@ export function ArticleForm({
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
     if (mode === "create" && target === "published" && json.slug)
-      router.push(`/artigo/${json.slug}`);
+      router.push(articlePath(languageCode, json.slug));
     else router.refresh();
   }
 
@@ -439,16 +456,67 @@ export function ArticleForm({
         <h1 className="font-serif text-2xl font-bold">
           {mode === "edit" ? "Editar artigo" : "Novo artigo"}
         </h1>
-        {article?.slug && (
+        {article?.slug && article.status === "published" && (
           <Button variant="outline" size="sm" asChild>
-            <Link href={`/artigo/${article.slug}`} target="_blank">
+            <Link
+              href={articlePath(languageCode, article.slug)}
+              target="_blank"
+            >
               Ver público ↗
             </Link>
           </Button>
         )}
       </div>
 
+      {mode === "edit" && article && (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border px-4 py-3 text-sm">
+          <Languages
+            className="size-4 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <span className="font-medium">
+            {LOCALE_CONFIG[languageCode].label}
+          </span>
+          <span className="text-muted-foreground">Adicionar tradução:</span>
+          {(Object.keys(LOCALE_CONFIG) as ArticleLanguage[])
+            .filter((language) => language !== languageCode)
+            .map((language) => (
+              <Link
+                key={language}
+                href={`/admin/novo?translationOf=${article.translation_group_id ?? article.id}&language=${language}`}
+                className="font-medium text-primary hover:underline"
+              >
+                {LOCALE_CONFIG[language].label}
+              </Link>
+            ))}
+        </div>
+      )}
+
       <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+        {mode === "create" && (
+          <div>
+            <Label htmlFor="f-language">Idioma da versão</Label>
+            <Select
+              value={languageCode}
+              onValueChange={(value) => {
+                if (isArticleLanguage(value)) setLanguageCode(value);
+              }}
+              disabled={Boolean(translationGroupId)}
+            >
+              <SelectTrigger id="f-language" className="mt-1.5">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(LOCALE_CONFIG).map(([language, config]) => (
+                  <SelectItem key={language} value={language}>
+                    {config.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div>
           <Label htmlFor="f-title">Título *</Label>
           <Input
@@ -469,7 +537,7 @@ export function ArticleForm({
             <Label htmlFor="f-slug">Slug (URL)</Label>
             <div className="relative mt-1.5">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                /artigo/
+                {articlePath(languageCode, "")}
               </span>
               <Input
                 id="f-slug"

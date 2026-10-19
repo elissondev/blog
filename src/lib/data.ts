@@ -8,6 +8,7 @@ import {
   demoArticleMd,
 } from "./demo-data";
 import type { ArticleCard, Category, InspirationalQuote, Tag } from "./types";
+import type { ArticleLanguage } from "./locales";
 import { authorDisplayName, authorFilterSlug, authorSlug } from "./utils";
 
 export const PER_PAGE = 9;
@@ -19,6 +20,7 @@ export type ListParams = {
   author?: string | null;
   sort?: "recent" | "oldest" | "title" | "relevance";
   page?: number;
+  language?: ArticleLanguage;
 };
 
 export type ListResult = {
@@ -32,7 +34,8 @@ export type ListResult = {
 /* ---------------- Fallbacks demo (sem Supabase configurado) ---------------- */
 
 function demoList(params: ListParams): ListResult {
-  let items = [...demoArticles];
+  let items =
+    params.language && params.language !== "pt-BR" ? [] : [...demoArticles];
   const q = params.q?.trim().toLowerCase();
   if (q)
     items = items.filter(
@@ -100,6 +103,7 @@ export async function listArticles(params: ListParams): Promise<ListResult> {
     author: params.author || null,
     sort: params.sort || "recent",
     page: Math.max(1, params.page ?? 1),
+    language: params.language ?? "pt-BR",
   };
   return getCachedArticleList(normalizedParams);
 }
@@ -130,6 +134,7 @@ async function getCachedArticleList(
     p_sort: params.sort || "recent",
     p_page: page,
     p_per_page: PER_PAGE,
+    p_language_code: params.language,
   });
 
   if (error) {
@@ -197,7 +202,11 @@ async function getCachedCategories(): Promise<
   const supabase = createClientPublic();
   const [{ data: cats }, { data: arts }] = await Promise.all([
     supabase.from("categories").select("*").order("name"),
-    supabase.from("articles").select("category_id").eq("status", "published"),
+    supabase
+      .from("articles")
+      .select("category_id")
+      .eq("status", "published")
+      .eq("language_code", "pt-BR"),
   ]);
   const counts = new Map<string, number>();
   for (const a of arts ?? []) {
@@ -232,13 +241,16 @@ async function getCachedTags(): Promise<(Tag & { count: number })[]> {
     supabase.from("tags").select("*").order("name"),
     supabase
       .from("article_tags")
-      .select("tag_id, article:articles!inner(status)"),
+      .select("tag_id, article:articles!inner(status,language_code)"),
   ]);
   const counts = new Map<string, number>();
   for (const l of links ?? []) {
-    const rel = (l as unknown as { article: { status: string } | null })
-      .article;
-    if (rel?.status === "published")
+    const rel = (
+      l as unknown as {
+        article: { status: string; language_code: string } | null;
+      }
+    ).article;
+    if (rel?.status === "published" && rel.language_code === "pt-BR")
       counts.set(l.tag_id, (counts.get(l.tag_id) ?? 0) + 1);
   }
   return (tags ?? []).map((t) => ({ ...t, count: counts.get(t.id) ?? 0 }));
@@ -286,7 +298,8 @@ async function getCachedAuthors(): Promise<
     .select(
       "author_id, profiles(full_name, description, article_description, avatar_url)",
     )
-    .eq("status", "published");
+    .eq("status", "published")
+    .eq("language_code", "pt-BR");
   const map = new Map<
     string,
     {
@@ -331,18 +344,35 @@ async function getCachedAuthors(): Promise<
 
 export async function getArticleBySlug(
   slug: string,
-): Promise<(ArticleCard & { content_md: string }) | null> {
+  language: ArticleLanguage = "pt-BR",
+): Promise<
+  | (ArticleCard & {
+      content_md: string;
+      language_code: ArticleLanguage;
+      translation_group_id: string;
+    })
+  | null
+> {
   if (!isSupabaseConfigured()) {
-    const found = demoArticles.find((a) => a.slug === slug) ?? demoArticles[0];
-    return { ...found, content_md: demoArticleMd };
+    if (language !== "pt-BR") return null;
+    const found = demoArticles.find((a) => a.slug === slug);
+    return found
+      ? {
+          ...found,
+          content_md: demoArticleMd,
+          language_code: "pt-BR",
+          translation_group_id: found.id,
+        }
+      : null;
   }
 
-  return getCachedArticle(slug);
+  return getCachedArticle(slug, language);
 }
 
 async function getCachedArticle(
   slug: string,
-): Promise<(ArticleCard & { content_md: string }) | null> {
+  language: ArticleLanguage,
+): Promise<Awaited<ReturnType<typeof getArticleBySlug>>> {
   "use cache";
   cacheLife({ stale: 300, revalidate: 60 * 60 * 24 * 365 });
 
@@ -353,10 +383,11 @@ async function getCachedArticle(
       "*, categories(id, name, slug), profiles(id, full_name, avatar_url), article_tags(tags(id, name, slug))",
     )
     .eq("slug", slug)
+    .eq("language_code", language)
     .eq("status", "published")
     .maybeSingle();
 
-  const cacheTags = [`article:${slug}`];
+  const cacheTags = [`article:${slug}`, `article:${language}:${slug}`];
   if (!data) {
     cacheTag(...cacheTags);
     return null;
@@ -389,6 +420,8 @@ async function getCachedArticle(
 
   return {
     id: data.id,
+    language_code: data.language_code as ArticleLanguage,
+    translation_group_id: data.translation_group_id,
     title: data.title,
     slug: data.slug,
     excerpt: data.excerpt,
@@ -407,8 +440,46 @@ async function getCachedArticle(
   };
 }
 
+export type PublishedTranslation = {
+  language_code: ArticleLanguage;
+  slug: string;
+};
+
+export async function getPublishedTranslations(
+  translationGroupId: string,
+): Promise<PublishedTranslation[]> {
+  if (!isSupabaseConfigured()) {
+    const article = demoArticles.find((item) => item.id === translationGroupId);
+    return article ? [{ language_code: "pt-BR", slug: article.slug }] : [];
+  }
+  return getCachedPublishedTranslations(translationGroupId);
+}
+
+async function getCachedPublishedTranslations(
+  translationGroupId: string,
+): Promise<PublishedTranslation[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.articles, `translation-group:${translationGroupId}`);
+
+  const supabase = createClientPublic();
+  const { data, error } = await supabase
+    .from("articles")
+    .select("language_code,slug")
+    .eq("translation_group_id", translationGroupId)
+    .eq("status", "published");
+
+  if (error) {
+    console.error("article translations:", error.message);
+    return [];
+  }
+  return (data ?? []) as PublishedTranslation[];
+}
+
 export type SitemapArticle = {
   slug: string;
+  language_code: ArticleLanguage;
+  translation_group_id: string;
   lastModified: string | null;
 };
 
@@ -416,6 +487,8 @@ export async function getSitemapArticles(): Promise<SitemapArticle[]> {
   if (!isSupabaseConfigured())
     return demoArticles.map((a) => ({
       slug: a.slug,
+      language_code: "pt-BR" as const,
+      translation_group_id: a.id,
       lastModified: a.published_at,
     }));
 
@@ -440,7 +513,9 @@ async function getCachedSitemapArticles(): Promise<SitemapArticle[]> {
   for (let offset = 0; ; offset += pageSize) {
     const { data, error } = await supabase
       .from("articles")
-      .select("slug, updated_at, published_at")
+      .select(
+        "slug, language_code, translation_group_id, updated_at, published_at",
+      )
       .eq("status", "published")
       .order("slug")
       .range(offset, offset + pageSize - 1);
@@ -450,6 +525,8 @@ async function getCachedSitemapArticles(): Promise<SitemapArticle[]> {
     articles.push(
       ...(data ?? []).map((article) => ({
         slug: article.slug,
+        language_code: article.language_code as ArticleLanguage,
+        translation_group_id: article.translation_group_id,
         lastModified: article.updated_at ?? article.published_at,
       })),
     );
