@@ -61,9 +61,18 @@ import {
   articlePath,
   isArticleLanguage,
   LOCALE_CONFIG,
+  localizedTaxonomyName,
   type ArticleLanguage,
 } from "@/lib/locales";
 import type { ArticleFull, Category, Tag } from "@/lib/types";
+
+type ArticleVersionLink = {
+  id: string;
+  title: string;
+  slug: string;
+  language_code: ArticleLanguage;
+  status: "draft" | "published";
+};
 
 /* ---------- Conversão TipTap <-> Markdown (subconjunto GFM) ---------- */
 
@@ -303,30 +312,38 @@ export function ArticleForm({
   categories,
   tags,
   initialTagIds = [],
+  initialCategoryId = null,
+  initialCoverUrl = null,
   initialLanguage = "pt-BR",
   translationGroupId,
+  translations = [],
   mode,
 }: {
   article?: ArticleFull;
-  categories: Pick<Category, "id" | "name" | "slug">[];
-  tags: Pick<Tag, "id" | "name">[];
+  categories: Category[];
+  tags: Tag[];
   initialTagIds?: string[];
+  initialCategoryId?: string | null;
+  initialCoverUrl?: string | null;
   initialLanguage?: ArticleLanguage;
   translationGroupId?: string | null;
+  translations?: ArticleVersionLink[];
   mode: "create" | "edit";
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(article?.title ?? "");
   const [slug, setSlug] = useState(article?.slug ?? "");
   const [excerpt, setExcerpt] = useState(article?.excerpt ?? "");
-  const [coverUrl, setCoverUrl] = useState(article?.cover_image_url ?? "");
+  const [coverUrl, setCoverUrl] = useState(
+    article?.cover_image_url ?? initialCoverUrl ?? "",
+  );
   const [isPinned, setIsPinned] = useState(article?.is_pinned ?? false);
   const [showHealthDisclaimer, setShowHealthDisclaimer] = useState(
     article?.show_health_disclaimer ?? true,
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [categoryId, setCategoryId] = useState(
-    article?.category_id ?? "__none__",
+    article?.category_id ?? initialCategoryId ?? "__none__",
   );
   const [selectedTags, setSelectedTags] = useState<string[]>(
     initialTagIds.length
@@ -451,13 +468,21 @@ export function ArticleForm({
       if (kind === "category") {
         setCategoryOptions((previous) => [
           ...previous,
-          { id: json.id, name, slug: slugify(name) },
+          {
+            id: json.id,
+            name,
+            slug: slugify(name),
+            description: null,
+          },
         ]);
         setCategoryId(json.id);
         setNewCategoryName("");
         setShowCategoryForm(false);
       } else {
-        setTagOptions((previous) => [...previous, { id: json.id, name }]);
+        setTagOptions((previous) => [
+          ...previous,
+          { id: json.id, name, slug: slugify(name) },
+        ]);
         setSelectedTags((previous) => [...previous, json.id]);
         setNewTagName("");
         setShowTagForm(false);
@@ -514,12 +539,31 @@ export function ArticleForm({
     setStatus(target);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
-    if (mode === "create" && target === "published" && json.slug)
-      router.push(articlePath(languageCode, json.slug));
-    else router.refresh();
+    if (mode === "create" && json.id) {
+      if (target === "published" && !translationGroupId && json.slug)
+        router.push(articlePath(languageCode, json.slug));
+      else router.push(`/admin/artigo/${json.id}/editar`);
+    } else router.refresh();
   }
 
   const mdPreview = editor ? docToMd(editor.getJSON()) : "";
+  const savedVersions = article
+    ? translations.some((version) => version.id === article.id)
+      ? translations
+      : [
+          ...translations,
+          {
+            id: article.id,
+            title: article.title,
+            slug: article.slug,
+            language_code: article.language_code ?? "pt-BR",
+            status: article.status,
+          },
+        ]
+    : translations;
+  const existingLanguages = new Set(
+    savedVersions.map((version) => version.language_code),
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-24">
@@ -607,27 +651,80 @@ export function ArticleForm({
       </div>
 
       {mode === "edit" && article && (
-        <div className="flex flex-wrap items-center gap-3 rounded-md border px-4 py-3 text-sm">
-          <Languages
-            className="size-4 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <span className="font-medium">
-            {LOCALE_CONFIG[languageCode].label}
-          </span>
-          <span className="text-muted-foreground">Adicionar tradução:</span>
-          {(Object.keys(LOCALE_CONFIG) as ArticleLanguage[])
-            .filter((language) => language !== languageCode)
-            .map((language) => (
-              <Link
-                key={language}
-                href={`/admin/novo?translationOf=${article.translation_group_id ?? article.id}&language=${language}`}
-                className="font-medium text-primary hover:underline"
+        <section
+          aria-labelledby="article-versions-heading"
+          className="space-y-3 rounded-md border bg-card p-4"
+        >
+          <div className="flex items-center gap-2">
+            <Languages
+              className="size-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <h2 id="article-versions-heading" className="text-sm font-semibold">
+              Versões deste artigo
+            </h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {savedVersions.map((version) => (
+              <div
+                key={version.id}
+                className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
               >
-                {LOCALE_CONFIG[language].label}
-              </Link>
+                <Badge variant="outline">
+                  {LOCALE_CONFIG[version.language_code].label}
+                </Badge>
+                {version.id === article.id ? (
+                  <span className="max-w-48 truncate font-medium">
+                    {version.title}
+                  </span>
+                ) : (
+                  <Link
+                    href={`/admin/artigo/${version.id}/editar`}
+                    className="max-w-48 truncate font-medium hover:underline"
+                  >
+                    {version.title}
+                  </Link>
+                )}
+                <Badge
+                  variant={
+                    version.status === "published" ? "default" : "secondary"
+                  }
+                >
+                  {version.status === "published" ? "Publicado" : "Rascunho"}
+                </Badge>
+                {version.status === "published" && (
+                  <Link
+                    href={articlePath(version.language_code, version.slug)}
+                    target="_blank"
+                    aria-label={`Ver versão ${LOCALE_CONFIG[version.language_code].label}`}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Eye className="size-4" aria-hidden="true" />
+                  </Link>
+                )}
+              </div>
             ))}
-        </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <span className="text-muted-foreground">Adicionar versão:</span>
+            {(Object.keys(LOCALE_CONFIG) as ArticleLanguage[])
+              .filter((language) => !existingLanguages.has(language))
+              .map((language) => (
+                <Link
+                  key={language}
+                  href={`/admin/novo?translationOf=${article.translation_group_id ?? article.id}&language=${language}`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {LOCALE_CONFIG[language].label}
+                </Link>
+              ))}
+            {savedVersions.length === Object.keys(LOCALE_CONFIG).length && (
+              <span className="text-muted-foreground">
+                Todos os idiomas já têm uma versão.
+              </span>
+            )}
+          </div>
+        </section>
       )}
 
       <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
@@ -645,11 +742,15 @@ export function ArticleForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(LOCALE_CONFIG).map(([language, config]) => (
-                  <SelectItem key={language} value={language}>
-                    {config.label}
-                  </SelectItem>
-                ))}
+                {Object.entries(LOCALE_CONFIG)
+                  .filter(
+                    ([language]) => translationGroupId || language === "pt-BR",
+                  )
+                  .map(([language, config]) => (
+                    <SelectItem key={language} value={language}>
+                      {config.label}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -697,25 +798,27 @@ export function ArticleForm({
                   <SelectItem value="__none__">Sem categoria</SelectItem>
                   {categoryOptions.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.name}
+                      {localizedTaxonomyName(c, languageCode)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-9"
-                onClick={() => {
-                  setShowCategoryForm((visible) => !visible);
-                  setTaxonomyError(null);
-                }}
-              >
-                <Plus className="size-4" /> Nova
-              </Button>
+              {languageCode === "pt-BR" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  onClick={() => {
+                    setShowCategoryForm((visible) => !visible);
+                    setTaxonomyError(null);
+                  }}
+                >
+                  <Plus className="size-4" /> Nova
+                </Button>
+              )}
             </div>
-            {showCategoryForm && (
+            {languageCode === "pt-BR" && showCategoryForm && (
               <form
                 className="mt-2 space-y-2"
                 onSubmit={(event) => {
@@ -822,19 +925,21 @@ export function ArticleForm({
         <div>
           <div className="flex items-center justify-between gap-2">
             <Label>Tags</Label>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setShowTagForm((visible) => !visible);
-                setTaxonomyError(null);
-              }}
-            >
-              <Plus className="size-4" /> Nova
-            </Button>
+            {languageCode === "pt-BR" && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowTagForm((visible) => !visible);
+                  setTaxonomyError(null);
+                }}
+              >
+                <Plus className="size-4" /> Nova
+              </Button>
+            )}
           </div>
-          {showTagForm && (
+          {languageCode === "pt-BR" && showTagForm && (
             <form
               className="mt-2 space-y-2"
               onSubmit={(event) => {
@@ -893,7 +998,8 @@ export function ArticleForm({
                   }
                   className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${on ? "border-primary bg-primary text-primary-foreground" : "hover:bg-accent"}`}
                 >
-                  {on && <Check className="mr-1 inline size-3" />}#{t.name}
+                  {on && <Check className="mr-1 inline size-3" />}#
+                  {localizedTaxonomyName(t, languageCode)}
                 </button>
               );
             })}

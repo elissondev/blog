@@ -25,7 +25,7 @@ async function requireUser() {
   return { supabase, user };
 }
 
-/** POST JSON { kind: "category"|"tag", id?, name, slug?, description? } */
+/** POST JSON { kind, id?, name, slug?, translations } */
 export async function POST(req: NextRequest) {
   const ctx = await requireUser();
   if ("error" in ctx) return ctx.error;
@@ -47,8 +47,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Nome inválido." }, { status: 400 });
 
     const record: Record<string, unknown> = { name, slug };
-    if (table === "categories")
+    if (table === "categories") {
       record.description = String(body.description ?? "").trim();
+      record.name_en = optionalText(body.name_en);
+      record.slug_en = optionalSlug(body.slug_en, body.name_en);
+      record.description_en = optionalText(body.description_en);
+      record.name_es = optionalText(body.name_es);
+      record.slug_es = optionalSlug(body.slug_es, body.name_es);
+      record.description_es = optionalText(body.description_es);
+    } else {
+      record.name_en = optionalText(body.name_en);
+      record.slug_en = optionalSlug(body.slug_en, body.name_en);
+      record.name_es = optionalText(body.name_es);
+      record.slug_es = optionalSlug(body.slug_es, body.name_es);
+    }
 
     let result;
     if (body.id) {
@@ -88,6 +100,17 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+function optionalText(value: unknown): string | null {
+  const text = String(value ?? "").trim();
+  return text || null;
+}
+
+function optionalSlug(value: unknown, name: unknown): string | null {
+  const text = String(value ?? "").trim();
+  const source = text || String(name ?? "").trim();
+  return source ? slugify(source) : null;
 }
 
 /** DELETE ?table=categories|tags&id=... */

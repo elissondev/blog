@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Clock, Languages } from "lucide-react";
 import { Markdown } from "@/components/markdown";
+import { Badge } from "@/components/ui/badge";
 import { getArticleBySlug, getPublishedTranslations } from "@/lib/data";
 import { articlePath, LOCALE_CONFIG, type Locale } from "@/lib/locales";
 import { formatDate } from "@/lib/utils";
@@ -77,7 +78,7 @@ export async function LocalizedArticlePage({
       />
       <article className="mx-auto max-w-3xl">
         <Link
-          href="/"
+          href={`/${locale}`}
           className="mb-6 inline-flex text-sm text-muted-foreground hover:text-foreground"
         >
           {labels.allArticles}
@@ -109,6 +110,16 @@ export async function LocalizedArticlePage({
         )}
 
         <header className="mb-8">
+          {(article.category_name || article.tags.length > 0) && (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {article.category_name && <Badge>{article.category_name}</Badge>}
+              {article.tags.map((tag) => (
+                <Badge key={tag.slug} variant="secondary">
+                  #{tag.name}
+                </Badge>
+              ))}
+            </div>
+          )}
           <h1 className="font-serif text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
             {article.title}
           </h1>

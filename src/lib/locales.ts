@@ -26,3 +26,21 @@ export function articlePath(language: ArticleLanguage, slug: string): string {
     ? `/${config.articleSegment}/${slug}`
     : `/${language}/${config.articleSegment}/${slug}`;
 }
+
+export function localizedTaxonomyName(
+  item: { name: string; name_en?: string | null; name_es?: string | null },
+  language: ArticleLanguage,
+): string {
+  if (language === "en") return item.name_en || item.name;
+  if (language === "es") return item.name_es || item.name;
+  return item.name;
+}
+
+export function localizedTaxonomySlug(
+  item: { slug: string; slug_en?: string | null; slug_es?: string | null },
+  language: ArticleLanguage,
+): string {
+  if (language === "en") return item.slug_en || item.slug;
+  if (language === "es") return item.slug_es || item.slug;
+  return item.slug;
+}

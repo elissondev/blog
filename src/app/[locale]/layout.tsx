@@ -7,6 +7,7 @@ import "../(pt)/globals.css";
 import { LOCALE_CONFIG, isLocale, SUPPORTED_LOCALES } from "@/lib/locales";
 import { Leaf, Rss } from "lucide-react";
 import { CurrentYear } from "@/components/current-year";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -93,7 +94,7 @@ export default async function LocalizedRootLayout({
         <header className="relative z-40 w-full border-b bg-background/90">
           <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
             <Link
-              href="/"
+              href={`/${locale}`}
               className="flex items-center gap-2 font-serif text-xl font-bold"
               aria-label="Élisson Kario"
             >
@@ -102,19 +103,17 @@ export default async function LocalizedRootLayout({
               </span>
               Élisson Kario
             </Link>
-            <Link
-              href="/"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              {isEnglish ? "Português" : "Portugués"}
-            </Link>
+            <LanguageSwitcher
+              currentLanguage={locale}
+              label={isEnglish ? "Choose language" : "Elegir idioma"}
+            />
           </div>
         </header>
         {children}
         <footer className="border-t bg-muted/30">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between">
             <Link
-              href="/"
+              href={`/${locale}`}
               className="flex items-center gap-2 font-serif font-bold"
             >
               <Leaf className="size-4 text-primary" aria-hidden="true" />

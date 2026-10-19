@@ -8,7 +8,11 @@ import {
   demoArticleMd,
 } from "./demo-data";
 import type { ArticleCard, Category, InspirationalQuote, Tag } from "./types";
-import type { ArticleLanguage } from "./locales";
+import {
+  localizedTaxonomyName,
+  localizedTaxonomySlug,
+  type ArticleLanguage,
+} from "./locales";
 import { authorDisplayName, authorFilterSlug, authorSlug } from "./utils";
 
 export const PER_PAGE = 9;
@@ -380,7 +384,7 @@ async function getCachedArticle(
   const { data } = await supabase
     .from("articles")
     .select(
-      "*, categories(id, name, slug), profiles(id, full_name, avatar_url), article_tags(tags(id, name, slug))",
+      "*, categories(id, name, slug, name_en, slug_en, name_es, slug_es), profiles(id, full_name, avatar_url), article_tags(tags(id, name, slug, name_en, slug_en, name_es, slug_es))",
     )
     .eq("slug", slug)
     .eq("language_code", language)
@@ -402,16 +406,35 @@ async function getCachedArticle(
     id: string;
     name: string;
     slug: string;
+    name_en?: string | null;
+    slug_en?: string | null;
+    name_es?: string | null;
+    slug_es?: string | null;
   } | null;
-  const tagsList = (
+  type LocalizedTag = {
+    id: string;
+    name: string;
+    slug: string;
+    name_en?: string | null;
+    slug_en?: string | null;
+    name_es?: string | null;
+    slug_es?: string | null;
+  };
+  const tagsList: LocalizedTag[] = (
     (data.article_tags ?? []) as unknown as {
-      tags: { id: string; name: string; slug: string } | null;
+      tags: {
+        id: string;
+        name: string;
+        slug: string;
+        name_en?: string | null;
+        slug_en?: string | null;
+        name_es?: string | null;
+        slug_es?: string | null;
+      } | null;
     }[]
   )
     .map((x) => x.tags)
-    .filter(
-      (tag): tag is { id: string; name: string; slug: string } => tag !== null,
-    );
+    .filter((tag): tag is LocalizedTag => tag !== null);
 
   if (profile?.id) cacheTags.push(`author:${profile.id}`);
   if (category?.id) cacheTags.push(`category:${category.id}`);
@@ -432,9 +455,12 @@ async function getCachedArticle(
     updated_at: data.updated_at,
     reading_minutes: data.reading_minutes,
     author_name: profile?.full_name ?? "",
-    category_name: category?.name ?? null,
-    category_slug: category?.slug ?? null,
-    tags: tagsList,
+    category_name: category ? localizedTaxonomyName(category, language) : null,
+    category_slug: category ? localizedTaxonomySlug(category, language) : null,
+    tags: tagsList.map((tag) => ({
+      name: localizedTaxonomyName(tag, language),
+      slug: localizedTaxonomySlug(tag, language),
+    })),
     total_count: 1,
     content_md: data.content_md,
   };

@@ -25,8 +25,22 @@ export type Category = {
   name: string;
   slug: string;
   description: string | null;
+  name_en?: string | null;
+  slug_en?: string | null;
+  description_en?: string | null;
+  name_es?: string | null;
+  slug_es?: string | null;
+  description_es?: string | null;
 };
-export type Tag = { id: string; name: string; slug: string };
+export type Tag = {
+  id: string;
+  name: string;
+  slug: string;
+  name_en?: string | null;
+  slug_en?: string | null;
+  name_es?: string | null;
+  slug_es?: string | null;
+};
 export type InspirationalQuote = {
   id: string;
   text: string;

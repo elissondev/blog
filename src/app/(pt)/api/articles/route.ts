@@ -56,11 +56,18 @@ export async function POST(req: NextRequest) {
     if (!isArticleLanguage(languageCode))
       return NextResponse.json({ error: "Idioma inválido." }, { status: 400 });
 
+    if (languageCode !== "pt-BR" && !translationGroupId)
+      return NextResponse.json(
+        { error: "Crie primeiro o artigo original em português." },
+        { status: 400 },
+      );
+
     if (translationGroupId) {
       const { data: source, error: sourceError } = await ctx.supabase
         .from("articles")
         .select("id")
         .eq("translation_group_id", translationGroupId)
+        .eq("language_code", "pt-BR")
         .eq("author_id", ctx.user.id)
         .limit(1)
         .maybeSingle();

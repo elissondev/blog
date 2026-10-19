@@ -35,6 +35,12 @@ create table if not exists public.categories (
   name text not null,
   slug text not null unique,
   description text not null default '',
+  name_en text,
+  slug_en text,
+  description_en text,
+  name_es text,
+  slug_es text,
+  description_es text,
   created_at timestamptz not null default now()
 );
 
@@ -49,8 +55,21 @@ create table if not exists public.tags (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   slug text not null unique,
+  name_en text,
+  slug_en text,
+  name_es text,
+  slug_es text,
   created_at timestamptz not null default now()
 );
+
+create unique index if not exists categories_slug_en_key
+  on public.categories (slug_en) where slug_en is not null;
+create unique index if not exists categories_slug_es_key
+  on public.categories (slug_es) where slug_es is not null;
+create unique index if not exists tags_slug_en_key
+  on public.tags (slug_en) where slug_en is not null;
+create unique index if not exists tags_slug_es_key
+  on public.tags (slug_es) where slug_es is not null;
 
 -- ---------- Artigos ----------
 create table if not exists public.articles (
@@ -145,14 +164,18 @@ create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
 begin
   new.updated_at = now();
-  if new.status = 'published' and old.published_at is null then
-    new.published_at = now();
+  if new.status = 'published' and new.published_at is null then
+    if tg_op = 'INSERT' then
+      new.published_at = now();
+    elsif old.published_at is null then
+      new.published_at = now();
+    end if;
   end if;
   return new;
 end; $$;
 
 drop trigger if exists articles_touch on public.articles;
-create trigger articles_touch before update on public.articles
+create trigger articles_touch before insert or update on public.articles
   for each row execute function public.touch_updated_at();
 
 -- ---------- RPC: listagem paginada com busca + filtros ----------
@@ -179,9 +202,28 @@ create or replace function public.search_articles(
       a.published_at, a.reading_minutes,
       a.is_pinned,
       p.full_name as author_name,
-      c.name as category_name, c.slug as category_slug,
+      case p_language_code
+        when 'en' then coalesce(c.name_en, c.name)
+        when 'es' then coalesce(c.name_es, c.name)
+        else c.name
+      end as category_name,
+      case p_language_code
+        when 'en' then coalesce(c.slug_en, c.slug)
+        when 'es' then coalesce(c.slug_es, c.slug)
+        else c.slug
+      end as category_slug,
       coalesce(
-        (select json_agg(json_build_object('name', t.name, 'slug', t.slug))
+        (select json_agg(json_build_object(
+           'name', case p_language_code
+             when 'en' then coalesce(t.name_en, t.name)
+             when 'es' then coalesce(t.name_es, t.name)
+             else t.name
+           end,
+           'slug', case p_language_code
+             when 'en' then coalesce(t.slug_en, t.slug)
+             when 'es' then coalesce(t.slug_es, t.slug)
+             else t.slug
+           end))
          from article_tags at2 join tags t on t.id = at2.tag_id
          where at2.article_id = a.id), '[]'::json) as tags,
       count(*) over() as total_count,
@@ -197,10 +239,20 @@ create or replace function public.search_articles(
     left join categories c on c.id = a.category_id
     where a.status = 'published'
       and a.language_code = p_language_code
-      and (p_category_slug is null or c.slug = p_category_slug)
+      and (p_category_slug is null or
+        (case p_language_code
+          when 'en' then coalesce(c.slug_en, c.slug)
+          when 'es' then coalesce(c.slug_es, c.slug)
+          else c.slug
+        end) = p_category_slug)
       and (p_tag_slug     is null or exists (
              select 1 from article_tags at3 join tags t3 on t3.id = at3.tag_id
-             where at3.article_id = a.id and t3.slug = p_tag_slug))
+             where at3.article_id = a.id and
+               (case p_language_code
+                 when 'en' then coalesce(t3.slug_en, t3.slug)
+                 when 'es' then coalesce(t3.slug_es, t3.slug)
+                 else t3.slug
+               end) = p_tag_slug))
       and (p_author_slug  is null or lower(replace(p.full_name,' ','-')) = p_author_slug)
       and (p_q is null or (
              to_tsvector(

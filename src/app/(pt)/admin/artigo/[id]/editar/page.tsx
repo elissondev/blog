@@ -6,6 +6,7 @@ import {
 import { ArticleForm } from "@/components/admin/article-form";
 import { demoCategories, demoTags } from "@/lib/demo-data";
 import type { ArticleFull } from "@/lib/types";
+import type { ArticleLanguage } from "@/lib/locales";
 
 export default async function EditArticlePage({
   params,
@@ -38,6 +39,15 @@ export default async function EditArticlePage({
         article={article}
         categories={demoCategories}
         tags={demoTags}
+        translations={[
+          {
+            id: article.id,
+            title: article.title,
+            slug: article.slug,
+            language_code: "pt-BR",
+            status: article.status,
+          },
+        ]}
         mode="edit"
       />
     );
@@ -74,6 +84,12 @@ export default async function EditArticlePage({
     .map((x) => x.tags)
     .filter(Boolean);
 
+  const { data: translations } = await supabase
+    .from("articles")
+    .select("id,title,slug,language_code,status")
+    .eq("translation_group_id", article.translation_group_id)
+    .order("language_code");
+
   return (
     <ArticleForm
       article={{
@@ -82,8 +98,13 @@ export default async function EditArticlePage({
         profiles: article.profiles,
       }}
       categories={cats ?? []}
-      tags={(tags ?? []).map((t) => ({ id: t.id, name: t.name, slug: t.slug }))}
+      tags={tags ?? []}
       initialTagIds={linkedTags.map((t) => t.id)}
+      translations={(translations ?? []).map((version) => ({
+        ...version,
+        language_code: version.language_code as ArticleLanguage,
+        status: version.status as "draft" | "published",
+      }))}
       mode="edit"
     />
   );

@@ -16,13 +16,14 @@ export default async function NewArticlePage({
     query.language && isArticleLanguage(query.language)
       ? query.language
       : "pt-BR";
+  const initialLanguage = query.translationOf ? requestedLanguage : "pt-BR";
 
   if (!isSupabaseConfigured()) {
     return (
       <ArticleForm
         categories={demoCategories}
         tags={demoTags}
-        initialLanguage={requestedLanguage}
+        initialLanguage={initialLanguage}
         translationGroupId={query.translationOf}
         mode="create"
       />
@@ -30,24 +31,37 @@ export default async function NewArticlePage({
   }
 
   const supabase = await createClientServer();
-  const [{ data: cats }, { data: tags }, { data: source }] = await Promise.all([
-    supabase.from("categories").select("id,name,slug").order("name"),
-    supabase.from("tags").select("id,name,slug").order("name"),
-    query.translationOf
-      ? supabase
-          .from("articles")
-          .select("translation_group_id")
-          .eq("translation_group_id", query.translationOf)
-          .limit(1)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  const [{ data: cats }, { data: tags }, { data: sources }] = await Promise.all(
+    [
+      supabase.from("categories").select("*").order("name"),
+      supabase.from("tags").select("*").order("name"),
+      query.translationOf
+        ? supabase
+            .from("articles")
+            .select(
+              "id,translation_group_id,language_code,cover_image_url,category_id,article_tags(tag_id)",
+            )
+            .eq("translation_group_id", query.translationOf)
+        : Promise.resolve({ data: [] }),
+    ],
+  );
+
+  const sourceRows = sources ?? [];
+  const source =
+    sourceRows.find((row) => row.language_code === "pt-BR") ?? sourceRows[0];
+  const coverSource = sourceRows.find((row) => row.cover_image_url) ?? source;
+  const initialTagIds = (
+    (source?.article_tags ?? []) as { tag_id: string }[]
+  ).map((tag) => tag.tag_id);
 
   return (
     <ArticleForm
       categories={cats ?? []}
       tags={tags ?? []}
-      initialLanguage={requestedLanguage}
+      initialCoverUrl={coverSource?.cover_image_url ?? null}
+      initialCategoryId={source?.category_id ?? null}
+      initialTagIds={initialTagIds}
+      initialLanguage={source ? initialLanguage : "pt-BR"}
       translationGroupId={source?.translation_group_id ?? null}
       mode="create"
     />

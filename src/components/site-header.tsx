@@ -3,10 +3,11 @@ import Link from "next/link";
 import { Leaf } from "lucide-react";
 import { SearchBox } from "./search-box";
 import { SiteNavigation, SiteNavigationFallback } from "./site-navigation";
+import { LanguageSwitcher } from "./language-switcher";
 
 export function SiteHeader() {
   return (
-    <header className="relative z-40 w-full border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70 md:sticky md:top-0">
+    <header className="relative z-40 w-full border-b bg-background/85 backdrop-blur supports-backdrop-filter:bg-background/70 md:sticky md:top-0">
       <div className="relative mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-x-4 px-4 sm:px-6">
         <Link
           href="/"
@@ -28,6 +29,7 @@ export function SiteHeader() {
             <SearchBox />
           </Suspense>
         </div>
+        <LanguageSwitcher currentLanguage="pt-BR" label="Idioma do site" />
       </div>
     </header>
   );

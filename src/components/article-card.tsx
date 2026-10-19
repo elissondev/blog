@@ -5,19 +5,48 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { formatDate, authorDisplayName, authorSlug } from "@/lib/utils";
 import type { ArticleCard } from "@/lib/types";
+import {
+  articlePath,
+  localizedTaxonomyName,
+  type ArticleLanguage,
+} from "@/lib/locales";
 
 export function ArticleCardComponent({
   article,
   showTags = true,
+  language = "pt-BR",
 }: {
   article: ArticleCard;
   showTags?: boolean;
+  language?: ArticleLanguage;
 }) {
+  const href = articlePath(language, article.slug);
+  const copy =
+    language === "en"
+      ? {
+          noCover: "No cover",
+          pinned: "Pinned",
+          reading: "min read",
+          read: "Read more",
+        }
+      : language === "es"
+        ? {
+            noCover: "Sin portada",
+            pinned: "Fijado",
+            reading: "min de lectura",
+            read: "Leer más",
+          }
+        : {
+            noCover: "Sem capa",
+            pinned: "Fixado",
+            reading: "min de leitura",
+            read: "Leia mais",
+          };
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md">
       <Link
-        href={`/artigo/${article.slug}`}
-        className="relative block aspect-[16/9] overflow-hidden bg-muted"
+        href={href}
+        className="relative block aspect-video overflow-hidden bg-muted"
         aria-label={article.title}
       >
         {article.cover_image_url ? (
@@ -30,7 +59,7 @@ export function ArticleCardComponent({
           />
         ) : (
           <div className="flex h-full items-center justify-center text-muted-foreground">
-            Sem capa
+            {copy.noCover}
           </div>
         )}
         {article.category_name && (
@@ -41,9 +70,9 @@ export function ArticleCardComponent({
         {article.is_pinned && (
           <Badge
             className="absolute right-3 top-3 gap-1 shadow"
-            aria-label="Artigo fixado"
+            aria-label={copy.pinned}
           >
-            <Pin className="size-3" /> Fixado
+            <Pin className="size-3" /> {copy.pinned}
           </Badge>
         )}
       </Link>
@@ -54,22 +83,36 @@ export function ArticleCardComponent({
             dateTime={article.published_at ?? undefined}
             className="flex items-center gap-1"
           >
-            <Clock className="size-3.5" /> {formatDate(article.published_at)}
+            <Clock className="size-3.5" />
+            {formatDate(
+              article.published_at,
+              language === "en"
+                ? "en-US"
+                : language === "es"
+                  ? "es-ES"
+                  : "pt-BR",
+            )}
           </time>
           <span className="flex items-center gap-1">
             <User className="size-3.5" />
-            <Link
-              href={`/autor/${authorSlug(article.author_name)}`}
-              className="hover:text-foreground"
-            >
-              {authorDisplayName(article.author_name)}
-            </Link>
+            {language === "pt-BR" ? (
+              <Link
+                href={`/autor/${authorSlug(article.author_name)}`}
+                className="hover:text-foreground"
+              >
+                {authorDisplayName(article.author_name)}
+              </Link>
+            ) : (
+              authorDisplayName(article.author_name)
+            )}
           </span>
-          <span>{article.reading_minutes} min de leitura</span>
+          <span>
+            {article.reading_minutes} {copy.reading}
+          </span>
         </div>
 
         <h3 className="font-serif text-lg font-semibold leading-snug">
-          <Link href={`/artigo/${article.slug}`} className="hover:text-primary">
+          <Link href={href} className="hover:text-primary">
             {article.title}
           </Link>
         </h3>
@@ -81,19 +124,16 @@ export function ArticleCardComponent({
         {showTags && article.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {article.tags.map((t) => (
-              <Badge key={t.slug} variant="secondary" asChild>
-                <Link href={`/tag/${t.slug}`}>#{t.name}</Link>
+              <Badge key={t.slug} variant="secondary">
+                #{localizedTaxonomyName(t, language)}
               </Badge>
             ))}
           </div>
         )}
 
         <Button variant="link" size="sm" className="w-fit px-0 mt-1" asChild>
-          <Link
-            href={`/artigo/${article.slug}`}
-            aria-label={`Leia mais sobre ${article.title}`}
-          >
-            Leia mais →
+          <Link href={href} aria-label={`${copy.read} ${article.title}`}>
+            {copy.read} →
           </Link>
         </Button>
       </div>
