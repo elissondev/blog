@@ -1,6 +1,19 @@
-export function HomeLoading() {
+import type { ArticleLanguage } from "@/lib/locales";
+
+export function HomeLoading({
+  language = "pt-BR",
+}: {
+  language?: ArticleLanguage;
+}) {
+  const copy =
+    language === "en"
+      ? { label: "Loading homepage", text: "Loading…" }
+      : language === "es"
+        ? { label: "Cargando página de inicio", text: "Cargando…" }
+        : { label: "Carregando página inicial", text: "Carregando…" };
+
   return (
-    <div role="status" aria-label="Carregando página inicial">
+    <div role="status" aria-label={copy.label}>
       <div className="mx-auto mt-5 max-w-7xl px-4 sm:px-6">
         <section
           aria-hidden="true"
@@ -51,7 +64,7 @@ export function HomeLoading() {
           </div>
         </main>
       </div>
-      <span className="sr-only">Carregando…</span>
+      <span className="sr-only">{copy.text}</span>
     </div>
   );
 }

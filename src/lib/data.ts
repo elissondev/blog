@@ -184,21 +184,24 @@ async function getCachedQuotes(): Promise<InspirationalQuote[]> {
   return (data ?? []) as InspirationalQuote[];
 }
 
-export async function getCategories(): Promise<
-  (Category & { count: number })[]
-> {
+export async function getCategories(
+  language: ArticleLanguage = "pt-BR",
+): Promise<(Category & { count: number })[]> {
   if (!isSupabaseConfigured())
     return demoCategories.map((c) => ({
       ...c,
-      count: demoArticles.filter((a) => a.category_slug === c.slug).length,
+      count:
+        language === "pt-BR"
+          ? demoArticles.filter((a) => a.category_slug === c.slug).length
+          : 0,
     }));
 
-  return getCachedCategories();
+  return getCachedCategories(language);
 }
 
-async function getCachedCategories(): Promise<
-  (Category & { count: number })[]
-> {
+async function getCachedCategories(
+  language: ArticleLanguage,
+): Promise<(Category & { count: number })[]> {
   "use cache";
   cacheLife("hours");
   cacheTag(CACHE_TAGS.categories, CACHE_TAGS.articles);
@@ -210,7 +213,7 @@ async function getCachedCategories(): Promise<
       .from("articles")
       .select("category_id")
       .eq("status", "published")
-      .eq("language_code", "pt-BR"),
+      .eq("language_code", language),
   ]);
   const counts = new Map<string, number>();
   for (const a of arts ?? []) {
@@ -224,18 +227,25 @@ async function getCachedCategories(): Promise<
   }));
 }
 
-export async function getTags(): Promise<(Tag & { count: number })[]> {
+export async function getTags(
+  language: ArticleLanguage = "pt-BR",
+): Promise<(Tag & { count: number })[]> {
   if (!isSupabaseConfigured())
     return demoTags.map((t) => ({
       ...t,
-      count: demoArticles.filter((a) => a.tags.some((x) => x.slug === t.slug))
-        .length,
+      count:
+        language === "pt-BR"
+          ? demoArticles.filter((a) => a.tags.some((x) => x.slug === t.slug))
+              .length
+          : 0,
     }));
 
-  return getCachedTags();
+  return getCachedTags(language);
 }
 
-async function getCachedTags(): Promise<(Tag & { count: number })[]> {
+async function getCachedTags(
+  language: ArticleLanguage,
+): Promise<(Tag & { count: number })[]> {
   "use cache";
   cacheLife("hours");
   cacheTag(CACHE_TAGS.tags, CACHE_TAGS.articles);
@@ -254,13 +264,13 @@ async function getCachedTags(): Promise<(Tag & { count: number })[]> {
         article: { status: string; language_code: string } | null;
       }
     ).article;
-    if (rel?.status === "published" && rel.language_code === "pt-BR")
+    if (rel?.status === "published" && rel.language_code === language)
       counts.set(l.tag_id, (counts.get(l.tag_id) ?? 0) + 1);
   }
   return (tags ?? []).map((t) => ({ ...t, count: counts.get(t.id) ?? 0 }));
 }
 
-export async function getAuthors(): Promise<
+export async function getAuthors(language: ArticleLanguage = "pt-BR"): Promise<
   {
     name: string;
     slug: string;
@@ -276,6 +286,7 @@ export async function getAuthors(): Promise<
   }[]
 > {
   if (!isSupabaseConfigured()) {
+    if (language !== "pt-BR") return [];
     const map = new Map<string, number>();
     for (const a of demoArticles)
       map.set(a.author_name, (map.get(a.author_name) ?? 0) + 1);
@@ -294,12 +305,12 @@ export async function getAuthors(): Promise<
     }));
   }
 
-  return getCachedAuthors();
+  return getCachedAuthors(language);
 }
 
-async function getCachedAuthors(): Promise<
-  Awaited<ReturnType<typeof getAuthors>>
-> {
+async function getCachedAuthors(
+  language: ArticleLanguage,
+): Promise<Awaited<ReturnType<typeof getAuthors>>> {
   "use cache";
   cacheLife("hours");
   cacheTag(CACHE_TAGS.authors, CACHE_TAGS.articles);
@@ -311,7 +322,7 @@ async function getCachedAuthors(): Promise<
       "author_id, profiles(full_name, description, description_en, description_es, article_description, article_description_en, article_description_es, avatar_url)",
     )
     .eq("status", "published")
-    .eq("language_code", "pt-BR");
+    .eq("language_code", language);
   const map = new Map<
     string,
     {

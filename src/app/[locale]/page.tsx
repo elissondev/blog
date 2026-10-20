@@ -1,25 +1,29 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ArticleCardComponent } from "@/components/article-card";
-import { listArticles } from "@/lib/data";
+import { Suspense } from "react";
+import { ArticleListPage } from "@/components/article-list-page";
+import { HomeLoading } from "@/components/home-loading";
 import { isLocale } from "@/lib/locales";
 
 export const instant = false;
 
 const pageCopy = {
   en: {
-    title: "Articles",
-    description: "Nutrition and science, grounded in research and evidence.",
-    empty: "No articles have been published in English yet.",
+    title: "Nutrition, Lifestyle & Health",
+    description:
+      "Studies, research, and articles about nutrition and healthy living.",
   },
   es: {
-    title: "Artículos",
-    description: "Nutrición y ciencia basadas en investigación y evidencia.",
-    empty: "Todavía no hay artículos publicados en español.",
+    title: "Nutrición, estilo de vida y salud",
+    description:
+      "Estudios, investigaciones y artículos sobre nutrición y vida saludable.",
   },
 } as const;
 
-type Props = { params: Promise<{ locale: string }> };
+type Props = {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
@@ -31,32 +35,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function LocalizedHomePage({ params }: Props) {
+export default async function LocalizedHomePage({
+  params,
+  searchParams,
+}: Props) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
 
-  const { articles } = await listArticles({ language: locale, sort: "recent" });
-  const copy = pageCopy[locale];
-
   return (
-    <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-      <header className="mb-8 border-b pb-6">
-        <h1 className="font-serif text-3xl font-bold">{copy.title}</h1>
-        <p className="mt-2 text-muted-foreground">{copy.description}</p>
-      </header>
-      {articles.length ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {articles.map((article) => (
-            <ArticleCardComponent
-              key={article.id}
-              article={article}
-              language={locale}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="py-10 text-center text-muted-foreground">{copy.empty}</p>
-      )}
-    </main>
+    <Suspense fallback={<HomeLoading language={locale} />}>
+      <ArticleListPage searchParams={searchParams} language={locale} />
+    </Suspense>
   );
 }
