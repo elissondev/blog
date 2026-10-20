@@ -29,6 +29,7 @@ export function SidebarLeft({
   activeTag?: string | null;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showAllTags, setShowAllTags] = useState(false);
   const [mobileMenuPinned, setMobileMenuPinned] = useState(false);
   const [mobileContentHeight, setMobileContentHeight] = useState(0);
   const menuSentinelRef = useRef<HTMLSpanElement>(null);
@@ -74,6 +75,21 @@ export function SidebarLeft({
 
   const mobilePanelPinned =
     mobileMenuPinned && mobileOpen && mobileContentHeight > 0;
+  const categoriesWithArticles = categories.filter(
+    (category) => category.count > 0,
+  );
+  const tagsWithArticles = tags.filter((tag) => tag.count > 0);
+  const collapsedTags = tagsWithArticles.slice(0, 10);
+  if (
+    activeTag &&
+    !collapsedTags.some((tag) => tag.slug === activeTag) &&
+    tagsWithArticles.some((tag) => tag.slug === activeTag)
+  ) {
+    collapsedTags[collapsedTags.length - 1] = tagsWithArticles.find(
+      (tag) => tag.slug === activeTag,
+    )!;
+  }
+  const visibleTags = showAllTags ? tagsWithArticles : collapsedTags;
 
   return (
     <aside
@@ -140,7 +156,7 @@ export function SidebarLeft({
                   Todas
                 </Link>
               </li>
-              {categories.map((c) => (
+              {categoriesWithArticles.map((c) => (
                 <li key={c.id}>
                   <Link
                     href={`/categoria/${c.slug}`}
@@ -174,8 +190,8 @@ export function SidebarLeft({
             >
               <Hash className="size-4" /> Tags
             </h2>
-            <div className="flex flex-wrap gap-2">
-              {tags.map((t) => (
+            <div id="tag-list" className="flex flex-wrap gap-2">
+              {visibleTags.map((t) => (
                 <Link
                   key={t.id}
                   href={`/tag/${t.slug}`}
@@ -189,12 +205,25 @@ export function SidebarLeft({
                 </Link>
               ))}
             </div>
+            {tagsWithArticles.length > 10 && (
+              <button
+                type="button"
+                aria-expanded={showAllTags}
+                aria-controls="tag-list"
+                onClick={() => setShowAllTags((showing) => !showing)}
+                className="mt-3 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {showAllTags
+                  ? "Ver menos"
+                  : `Ver mais (${tagsWithArticles.length - collapsedTags.length})`}
+              </button>
+            )}
           </nav>
 
           {authors.length > 0 && (
             <nav
               aria-labelledby="nav-autores"
-              className={`rounded-xl border bg-card p-5 shadow-sm ${mobileOpen ? "" : "hidden xl:block"}`}
+              className="rounded-xl border bg-card p-5 shadow-sm"
             >
               <h2
                 id="nav-autores"
@@ -236,7 +265,7 @@ export function SidebarLeft({
 
           <section
             aria-labelledby="donation-heading"
-            className={`rounded-xl border bg-card p-5 shadow-sm ${mobileOpen ? "" : "hidden xl:block"}`}
+            className="rounded-xl border bg-card p-5 shadow-sm"
           >
             <h2
               id="donation-heading"
