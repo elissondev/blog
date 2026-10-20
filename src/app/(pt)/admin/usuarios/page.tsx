@@ -25,7 +25,9 @@ export default async function AdminUsersPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, description, article_description, avatar_url")
+    .select(
+      "full_name, description, description_en, description_es, article_description, article_description_en, article_description_es, avatar_url",
+    )
     .eq("id", user.id)
     .maybeSingle();
 
@@ -41,7 +43,11 @@ export default async function AdminUsersPage() {
       <ProfileManager
         fullName={profile?.full_name ?? user.user_metadata.full_name ?? ""}
         description={profile?.description ?? ""}
+        descriptionEn={profile?.description_en ?? ""}
+        descriptionEs={profile?.description_es ?? ""}
         articleDescription={profile?.article_description ?? ""}
+        articleDescriptionEn={profile?.article_description_en ?? ""}
+        articleDescriptionEs={profile?.article_description_es ?? ""}
         avatarUrl={profile?.avatar_url ?? null}
       />
     </section>

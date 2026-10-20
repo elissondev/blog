@@ -9,7 +9,6 @@ import {
   ChevronLeft,
   Heart,
   MessageCircle,
-  TriangleAlert,
   Languages,
 } from "lucide-react";
 import {
@@ -18,12 +17,18 @@ import {
   getPublishedTranslations,
   listArticles,
 } from "@/lib/data";
-import { hasReferencesSection, Markdown } from "@/components/markdown";
+import { Markdown } from "@/components/markdown";
+import { HealthDisclaimer } from "@/components/health-disclaimer";
 import { ExpandableText } from "@/components/expandable-text";
 import { ArticleCardComponent } from "@/components/article-card";
+import { ArticleLikeButton } from "@/components/article-like-button";
 import { Badge } from "@/components/ui/badge";
 import { authorDisplayName, formatDate, authorSlug } from "@/lib/utils";
-import { articlePath, LOCALE_CONFIG } from "@/lib/locales";
+import {
+  ARTICLE_LANGUAGE_ORDER,
+  articlePath,
+  LOCALE_CONFIG,
+} from "@/lib/locales";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -91,24 +96,13 @@ export default async function ArticlePage({ params }: Props) {
     (item) => item.slug === authorSlug(article.author_name),
   );
   const healthDisclaimer = article.show_health_disclaimer ? (
-    <aside
-      role="note"
-      className="not-prose my-8 flex flex-col items-start gap-2 border-l-4 border-amber-500 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 sm:flex-row sm:gap-3 dark:bg-amber-950/30 dark:text-amber-100"
-    >
-      <TriangleAlert
-        className="size-5 shrink-0 text-amber-700 sm:mt-0.5 dark:text-amber-300"
-        aria-hidden="true"
-      />
-      <div>
-        <strong>IMPORTANTE:</strong> As informações contidas neste artigo são
-        apenas para divulgação do conhecimento, não devendo ser usadas com o
-        objetivo de diagnosticar doenças ou estabelecer qualquer tipo de
-        tratamento. Lembramos que diagnósticos e tratamentos precisam sempre ser
-        estabelecidos por um profissional de saúde de sua confiança.
-      </div>
-    </aside>
+    <HealthDisclaimer title="Aviso de saúde:">
+      Este artigo tem finalidade informativa e educacional. Não substitui
+      avaliação, diagnóstico ou orientação individual de um profissional de
+      saúde. Para decisões sobre sua saúde, consulte um profissional
+      qualificado.
+    </HealthDisclaimer>
   ) : null;
-  const hasReferences = hasReferencesSection(article.content_md);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -149,6 +143,43 @@ export default async function ArticlePage({ params }: Props) {
         </Link>
 
         <header className="mb-8">
+          {translations.length > 1 && (
+            <nav
+              aria-label="Idiomas disponíveis"
+              className="mb-5 flex flex-wrap items-center gap-2 text-sm"
+            >
+              <Languages
+                className="size-4 text-muted-foreground"
+                aria-hidden="true"
+              />
+              {[...translations]
+                .sort(
+                  (a, b) =>
+                    ARTICLE_LANGUAGE_ORDER.indexOf(a.language_code) -
+                    ARTICLE_LANGUAGE_ORDER.indexOf(b.language_code),
+                )
+                .map((translation) => (
+                  <Link
+                    key={translation.language_code}
+                    href={articlePath(
+                      translation.language_code,
+                      translation.slug,
+                    )}
+                    hrefLang={LOCALE_CONFIG[translation.language_code].htmlLang}
+                    aria-current={
+                      translation.language_code === "pt-BR" ? "page" : undefined
+                    }
+                    className="inline-flex items-center gap-1 underline-offset-4 hover:underline aria-[current=page]:font-semibold"
+                  >
+                    <span aria-hidden="true">
+                      {LOCALE_CONFIG[translation.language_code].flag}
+                    </span>
+                    {LOCALE_CONFIG[translation.language_code].label}
+                  </Link>
+                ))}
+            </nav>
+          )}
+
           <div className="mb-4 flex flex-wrap items-center gap-2">
             {article.category_name && (
               <Badge asChild>
@@ -165,34 +196,6 @@ export default async function ArticlePage({ params }: Props) {
               </Badge>
             ))}
           </div>
-
-          {translations.length > 1 && (
-            <nav
-              aria-label="Idiomas disponíveis"
-              className="mb-5 flex flex-wrap items-center gap-2 text-sm"
-            >
-              <Languages
-                className="size-4 text-muted-foreground"
-                aria-hidden="true"
-              />
-              {translations.map((translation) => (
-                <Link
-                  key={translation.language_code}
-                  href={articlePath(
-                    translation.language_code,
-                    translation.slug,
-                  )}
-                  hrefLang={LOCALE_CONFIG[translation.language_code].htmlLang}
-                  aria-current={
-                    translation.language_code === "pt-BR" ? "page" : undefined
-                  }
-                  className="underline-offset-4 hover:underline aria-[current=page]:font-semibold"
-                >
-                  {LOCALE_CONFIG[translation.language_code].label}
-                </Link>
-              ))}
-            </nav>
-          )}
 
           <h1 className="font-serif text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
             {article.title}
@@ -234,13 +237,12 @@ export default async function ArticlePage({ params }: Props) {
           </div>
         )}
 
-        <Markdown
-          content={article.content_md}
-          beforeReferences={hasReferences ? healthDisclaimer : undefined}
-        />
-        {!hasReferences && healthDisclaimer}
+        <Markdown content={article.content_md} />
+        {healthDisclaimer}
 
-        <section className="mt-12 border-t pt-8" aria-labelledby="sobre-autor">
+        <ArticleLikeButton articleId={article.id} locale="pt-BR" />
+
+        <section className="pt-8" aria-labelledby="sobre-autor">
           <h2 id="sobre-autor" className="mb-4 font-serif text-2xl font-bold">
             Sobre o autor
           </h2>
@@ -283,35 +285,37 @@ export default async function ArticlePage({ params }: Props) {
           </div>
         </section>
 
-        <section
-          className="mt-8 rounded-lg border bg-card p-5"
-          aria-labelledby="article-donation-heading"
-        >
-          <h2
-            id="article-donation-heading"
-            className="flex items-center gap-2 font-serif text-xl font-bold"
+        <section className="mt-8 border-t pt-8">
+          <div
+            className="rounded-lg border bg-card p-5"
+            aria-labelledby="article-donation-heading"
           >
-            <Heart className="size-5 text-primary" aria-hidden="true" />
-            Apoie este trabalho
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Este blog é mantido de forma 100% independente, livre de patrocínios
-            da indústria ou narrativas da mídia. Se este conteúdo foi útil e
-            você quer ajudar a financiar a busca por informação objetiva,
-            considere fazer uma doação. Produzir artigos aprofundados e testados
-            na prática exige dezenas de horas de pesquisa e investigação. Sua
-            contribuição ajuda a manter este site no ar e me permite dedicar
-            mais tempo a trazer a verdade à tona.
-          </p>
-          <Link
-            href={`https://wa.me/5542999355018?text=${encodeURIComponent("Olá Élisson, gostaria de contribuir com seu site doando uma quantia para você.")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            <MessageCircle className="size-4" aria-hidden="true" />
-            Falar sobre doação
-          </Link>
+            <h2
+              id="article-donation-heading"
+              className="flex items-center gap-2 font-serif text-xl font-bold"
+            >
+              <Heart className="size-5 text-primary" aria-hidden="true" />
+              Apoie este trabalho
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Este blog é mantido de forma 100% independente, livre de
+              patrocínios da indústria ou narrativas da mídia. Se este conteúdo
+              foi útil e você quer ajudar a financiar a busca por informação
+              objetiva, considere fazer uma doação. Produzir artigos
+              aprofundados e testados na prática exige dezenas de horas de
+              pesquisa e investigação. Sua contribuição ajuda a manter este site
+              no ar e me permite dedicar mais tempo a trazer a verdade à tona.
+            </p>
+            <Link
+              href={`https://wa.me/5542999355018?text=${encodeURIComponent("Olá Élisson, gostaria de contribuir com seu site doando uma quantia para você.")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <MessageCircle className="size-4" aria-hidden="true" />
+              Falar sobre doação
+            </Link>
+          </div>
         </section>
       </article>
 

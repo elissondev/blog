@@ -2,14 +2,43 @@ export const SUPPORTED_LOCALES = ["en", "es"] as const;
 
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 export type ArticleLanguage = "pt-BR" | Locale;
+export const ARTICLE_LANGUAGE_ORDER: readonly ArticleLanguage[] = [
+  "pt-BR",
+  "en",
+  "es",
+];
 
 export const LOCALE_CONFIG: Record<
   ArticleLanguage,
-  { htmlLang: string; articleSegment: string; label: string }
+  {
+    htmlLang: string;
+    articleSegment: string;
+    authorSegment: string;
+    label: string;
+    flag: string;
+  }
 > = {
-  "pt-BR": { htmlLang: "pt-BR", articleSegment: "artigo", label: "Português" },
-  en: { htmlLang: "en", articleSegment: "article", label: "English" },
-  es: { htmlLang: "es", articleSegment: "articulo", label: "Español" },
+  "pt-BR": {
+    htmlLang: "pt-BR",
+    articleSegment: "artigo",
+    authorSegment: "autor",
+    label: "Português",
+    flag: "🇧🇷",
+  },
+  en: {
+    htmlLang: "en",
+    articleSegment: "article",
+    authorSegment: "author",
+    label: "English",
+    flag: "🇺🇸",
+  },
+  es: {
+    htmlLang: "es",
+    articleSegment: "articulo",
+    authorSegment: "autor",
+    label: "Español",
+    flag: "🇪🇸",
+  },
 };
 
 export function isLocale(value: string): value is Locale {
@@ -25,6 +54,13 @@ export function articlePath(language: ArticleLanguage, slug: string): string {
   return language === "pt-BR"
     ? `/${config.articleSegment}/${slug}`
     : `/${language}/${config.articleSegment}/${slug}`;
+}
+
+export function authorPath(language: ArticleLanguage, slug: string): string {
+  const config = LOCALE_CONFIG[language];
+  return language === "pt-BR"
+    ? `/${config.authorSegment}/${slug}`
+    : `/${language}/${config.authorSegment}/${slug}`;
 }
 
 export function localizedTaxonomyName(

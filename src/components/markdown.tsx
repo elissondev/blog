@@ -1,4 +1,3 @@
-import { Children, isValidElement, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
@@ -16,23 +15,6 @@ function normalizedHeadingText(text: string): string {
     .toLowerCase();
 }
 
-function headingText(children: ReactNode): string {
-  const text = Children.toArray(children)
-    .map((child) => {
-      if (typeof child === "string" || typeof child === "number")
-        return String(child);
-      if (isValidElement<{ children?: ReactNode }>(child))
-        return headingText(child.props.children);
-      return "";
-    })
-    .join("");
-  return normalizedHeadingText(text);
-}
-
-function isReferencesHeading(children: ReactNode): boolean {
-  return headingText(children).startsWith("referencias");
-}
-
 export function hasReferencesSection(content: string): boolean {
   return content.split(/\r?\n/).some((line) => {
     const match = /^#{1,6}\s+(.+?)\s*#*\s*$/.exec(line);
@@ -45,11 +27,9 @@ export function hasReferencesSection(content: string): boolean {
 export function Markdown({
   content,
   className,
-  beforeReferences,
 }: {
   content: string;
   className?: string;
-  beforeReferences?: ReactNode;
 }) {
   return (
     <div
@@ -62,54 +42,6 @@ export function Markdown({
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeSlug]}
         components={{
-          h1: ({ children, ...props }) => (
-            <>
-              {beforeReferences && isReferencesHeading(children)
-                ? beforeReferences
-                : null}
-              <h1 {...props}>{children}</h1>
-            </>
-          ),
-          h2: ({ children, ...props }) => (
-            <>
-              {beforeReferences && isReferencesHeading(children)
-                ? beforeReferences
-                : null}
-              <h2 {...props}>{children}</h2>
-            </>
-          ),
-          h3: ({ children, ...props }) => (
-            <>
-              {beforeReferences && isReferencesHeading(children)
-                ? beforeReferences
-                : null}
-              <h3 {...props}>{children}</h3>
-            </>
-          ),
-          h4: ({ children, ...props }) => (
-            <>
-              {beforeReferences && isReferencesHeading(children)
-                ? beforeReferences
-                : null}
-              <h4 {...props}>{children}</h4>
-            </>
-          ),
-          h5: ({ children, ...props }) => (
-            <>
-              {beforeReferences && isReferencesHeading(children)
-                ? beforeReferences
-                : null}
-              <h5 {...props}>{children}</h5>
-            </>
-          ),
-          h6: ({ children, ...props }) => (
-            <>
-              {beforeReferences && isReferencesHeading(children)
-                ? beforeReferences
-                : null}
-              <h6 {...props}>{children}</h6>
-            </>
-          ),
           table: ({ children, ...props }) => (
             <div className="my-6 max-w-full overflow-x-auto rounded-xl border border-border bg-card">
               <table

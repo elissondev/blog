@@ -25,7 +25,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const fullName = String(body.full_name ?? "").trim();
     const description = String(body.description ?? "").trim();
+    const descriptionEn = String(body.description_en ?? "").trim();
+    const descriptionEs = String(body.description_es ?? "").trim();
     const articleDescription = String(body.article_description ?? "").trim();
+    const articleDescriptionEn = String(
+      body.article_description_en ?? "",
+    ).trim();
+    const articleDescriptionEs = String(
+      body.article_description_es ?? "",
+    ).trim();
     const avatarUrl = body.avatar_url ? String(body.avatar_url).trim() : null;
 
     if (!fullName || fullName.length > 120) {
@@ -40,10 +48,35 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    if (descriptionEn.length > 2000 || descriptionEs.length > 2000) {
+      return NextResponse.json(
+        {
+          error:
+            "As descrições da página do autor devem ter no máximo 2.000 caracteres.",
+        },
+        { status: 400 },
+      );
+    }
     if (articleDescription.length > 2000) {
       return NextResponse.json(
         {
           error: "A descrição dos artigos deve ter no máximo 2.000 caracteres.",
+        },
+        { status: 400 },
+      );
+    }
+    if (articleDescriptionEn.length > 2000) {
+      return NextResponse.json(
+        {
+          error: "A descrição em inglês deve ter no máximo 2.000 caracteres.",
+        },
+        { status: 400 },
+      );
+    }
+    if (articleDescriptionEs.length > 2000) {
+      return NextResponse.json(
+        {
+          error: "A descrição em espanhol deve ter no máximo 2.000 caracteres.",
         },
         { status: 400 },
       );
@@ -60,7 +93,11 @@ export async function POST(request: NextRequest) {
       .update({
         full_name: fullName,
         description,
+        description_en: descriptionEn,
+        description_es: descriptionEs,
         article_description: articleDescription,
+        article_description_en: articleDescriptionEn,
+        article_description_es: articleDescriptionEs,
         avatar_url: avatarUrl,
       })
       .eq("id", user.id)

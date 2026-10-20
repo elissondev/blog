@@ -10,18 +10,34 @@ import { Textarea } from "@/components/ui/textarea";
 export function ProfileManager({
   fullName: initialName,
   description: initialDescription,
+  descriptionEn: initialDescriptionEn,
+  descriptionEs: initialDescriptionEs,
   articleDescription: initialArticleDescription,
+  articleDescriptionEn: initialArticleDescriptionEn,
+  articleDescriptionEs: initialArticleDescriptionEs,
   avatarUrl: initialAvatarUrl,
 }: {
   fullName: string;
   description: string;
+  descriptionEn: string;
+  descriptionEs: string;
   articleDescription: string;
+  articleDescriptionEn: string;
+  articleDescriptionEs: string;
   avatarUrl: string | null;
 }) {
   const [fullName, setFullName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
+  const [descriptionEn, setDescriptionEn] = useState(initialDescriptionEn);
+  const [descriptionEs, setDescriptionEs] = useState(initialDescriptionEs);
   const [articleDescription, setArticleDescription] = useState(
     initialArticleDescription,
+  );
+  const [articleDescriptionEn, setArticleDescriptionEn] = useState(
+    initialArticleDescriptionEn,
+  );
+  const [articleDescriptionEs, setArticleDescriptionEs] = useState(
+    initialArticleDescriptionEs,
   );
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
   const [uploading, setUploading] = useState(false);
@@ -68,7 +84,11 @@ export function ProfileManager({
         body: JSON.stringify({
           full_name: fullName,
           description,
+          description_en: descriptionEn,
+          description_es: descriptionEs,
           article_description: articleDescription,
+          article_description_en: articleDescriptionEn,
+          article_description_es: articleDescriptionEs,
           avatar_url: avatarUrl,
         }),
       });
@@ -157,7 +177,7 @@ export function ProfileManager({
 
       <div className="space-y-2">
         <label htmlFor="profile-description" className="text-sm font-medium">
-          Descrição da página do autor
+          Descrição da página do autor (Português)
         </label>
         <Textarea
           id="profile-description"
@@ -173,11 +193,45 @@ export function ProfileManager({
       </div>
 
       <div className="space-y-2">
+        <label htmlFor="profile-description-en" className="text-sm font-medium">
+          Descrição da página do autor (English)
+        </label>
+        <Textarea
+          id="profile-description-en"
+          value={descriptionEn}
+          onChange={(event) => setDescriptionEn(event.currentTarget.value)}
+          rows={5}
+          maxLength={2000}
+          placeholder="Write a short introduction for your author page."
+        />
+        <p className="text-right text-xs text-muted-foreground">
+          {descriptionEn.length}/2000
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="profile-description-es" className="text-sm font-medium">
+          Descrição da página do autor (Español)
+        </label>
+        <Textarea
+          id="profile-description-es"
+          value={descriptionEs}
+          onChange={(event) => setDescriptionEs(event.currentTarget.value)}
+          rows={5}
+          maxLength={2000}
+          placeholder="Escribe una breve presentación para tu página de autor."
+        />
+        <p className="text-right text-xs text-muted-foreground">
+          {descriptionEs.length}/2000
+        </p>
+      </div>
+
+      <div className="space-y-2">
         <label
           htmlFor="profile-article-description"
           className="text-sm font-medium"
         >
-          Descrição exibida abaixo dos artigos
+          Descrição exibida abaixo dos artigos (Português)
         </label>
         <Textarea
           id="profile-article-description"
@@ -189,6 +243,50 @@ export function ProfileManager({
         />
         <p className="text-right text-xs text-muted-foreground">
           {articleDescription.length}/2000
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label
+          htmlFor="profile-article-description-en"
+          className="text-sm font-medium"
+        >
+          Descrição exibida abaixo dos artigos (English)
+        </label>
+        <Textarea
+          id="profile-article-description-en"
+          value={articleDescriptionEn}
+          onChange={(event) =>
+            setArticleDescriptionEn(event.currentTarget.value)
+          }
+          rows={5}
+          maxLength={2000}
+          placeholder="Write an introduction for the article footer."
+        />
+        <p className="text-right text-xs text-muted-foreground">
+          {articleDescriptionEn.length}/2000
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label
+          htmlFor="profile-article-description-es"
+          className="text-sm font-medium"
+        >
+          Descrição exibida abaixo dos artigos (Español)
+        </label>
+        <Textarea
+          id="profile-article-description-es"
+          value={articleDescriptionEs}
+          onChange={(event) =>
+            setArticleDescriptionEs(event.currentTarget.value)
+          }
+          rows={5}
+          maxLength={2000}
+          placeholder="Escribe una presentación para el pie de los artículos."
+        />
+        <p className="text-right text-xs text-muted-foreground">
+          {articleDescriptionEs.length}/2000
         </p>
       </div>
 

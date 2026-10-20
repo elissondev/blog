@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getArticleBySlug, getPublishedTranslations } from "@/lib/data";
-import { isLocale, LOCALE_CONFIG } from "@/lib/locales";
+import {
+  getArticleBySlug,
+  getAuthors,
+  getPublishedTranslations,
+} from "@/lib/data";
+import { authorPath, isLocale, LOCALE_CONFIG } from "@/lib/locales";
 import { LocalizedArticlePage } from "@/components/localized-article-page";
+import { LocalizedAuthorPage } from "@/components/localized-author-page";
+import { authorSlug } from "@/lib/utils";
 
 type Props = {
   params: Promise<{ locale: string; section: string; slug: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 };
 
 export const instant = false;
@@ -14,8 +21,34 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, section, slug } = await params;
-  if (!isLocale(locale) || section !== LOCALE_CONFIG[locale].articleSegment)
-    return {};
+  if (!isLocale(locale)) return {};
+
+  if (section === LOCALE_CONFIG[locale].authorSegment) {
+    const authors = await getAuthors();
+    const author = authors.find((item) => item.slug === authorSlug(slug));
+    if (!author)
+      return {
+        title: locale === "en" ? "Author not found" : "Autor no encontrado",
+        robots: { index: false },
+      };
+    const description =
+      (locale === "en" ? author.description_en : author.description_es) ||
+      (locale === "en"
+        ? `Articles published by ${author.name} on Élisson Kario's website.`
+        : `Artículos publicados por ${author.name} en el sitio de Élisson Kario.`);
+    const url = `${siteUrl}${authorPath(locale, author.slug)}`;
+    return {
+      title:
+        locale === "en"
+          ? `Articles by ${author.name}`
+          : `Artículos de ${author.name}`,
+      description,
+      alternates: { canonical: url },
+      openGraph: { title: author.name, description, url },
+    };
+  }
+
+  if (section !== LOCALE_CONFIG[locale].articleSegment) return {};
 
   const article = await getArticleBySlug(slug, locale);
   if (!article)
@@ -70,9 +103,21 @@ function articlePathForTranslation(
   return `/${language}/${LOCALE_CONFIG[language].articleSegment}/${slug}`;
 }
 
-export default async function LocalizedArticleRoute({ params }: Props) {
+export default async function LocalizedArticleRoute({
+  params,
+  searchParams,
+}: Props) {
   const { locale, section, slug } = await params;
-  if (!isLocale(locale) || section !== LOCALE_CONFIG[locale].articleSegment)
-    notFound();
-  return <LocalizedArticlePage locale={locale} slug={slug} />;
+  if (!isLocale(locale)) notFound();
+  if (section === LOCALE_CONFIG[locale].authorSegment)
+    return (
+      <LocalizedAuthorPage
+        locale={locale}
+        slug={slug}
+        searchParams={searchParams}
+      />
+    );
+  if (section === LOCALE_CONFIG[locale].articleSegment)
+    return <LocalizedArticlePage locale={locale} slug={slug} />;
+  notFound();
 }

@@ -1,29 +1,33 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Clock, Languages } from "lucide-react";
+import {
+  ChevronLeft,
+  Clock,
+  Heart,
+  Languages,
+  MessageCircle,
+  User,
+} from "lucide-react";
+import { HealthDisclaimer } from "@/components/health-disclaimer";
 import { Markdown } from "@/components/markdown";
+import { ArticleLikeButton } from "@/components/article-like-button";
 import { Badge } from "@/components/ui/badge";
-import { getArticleBySlug, getPublishedTranslations } from "@/lib/data";
-import { articlePath, LOCALE_CONFIG, type Locale } from "@/lib/locales";
-import { formatDate } from "@/lib/utils";
-
-const copy = {
-  en: {
-    allArticles: "All articles",
-    reading: "min read",
-    language: "Available languages",
-    healthNotice:
-      "IMPORTANT: This article is for educational purposes only. It is not intended to diagnose illness or establish treatment. Diagnosis and treatment should always be determined by a qualified health professional.",
-  },
-  es: {
-    allArticles: "Todos los artículos",
-    reading: "min de lectura",
-    language: "Idiomas disponibles",
-    healthNotice:
-      "IMPORTANTE: Este artículo tiene fines educativos. No debe utilizarse para diagnosticar enfermedades ni establecer tratamientos. El diagnóstico y el tratamiento deben ser determinados por un profesional de salud cualificado.",
-  },
-} as const;
+import {
+  getArticleBySlug,
+  getAuthors,
+  hasPublishedHealthDisclaimer,
+  getPublishedTranslations,
+} from "@/lib/data";
+import { getArticleCopy } from "@/lib/article-copy";
+import {
+  ARTICLE_LANGUAGE_ORDER,
+  articlePath,
+  authorPath,
+  LOCALE_CONFIG,
+  type Locale,
+} from "@/lib/locales";
+import { authorDisplayName, authorSlug, formatDate } from "@/lib/utils";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
@@ -37,21 +41,19 @@ export async function LocalizedArticlePage({
   const article = await getArticleBySlug(slug, locale);
   if (!article) notFound();
 
-  const translations = await getPublishedTranslations(
-    article.translation_group_id,
+  const [translations, authors, healthNoticeEnabled] = await Promise.all([
+    getPublishedTranslations(article.translation_group_id),
+    getAuthors(),
+    hasPublishedHealthDisclaimer(article.translation_group_id),
+  ]);
+  const labels = getArticleCopy(locale);
+  const author = authors.find(
+    (item) => item.slug === authorSlug(article.author_name),
   );
-  const labels = copy[locale];
-  const hasReferences =
-    /(^|\n)#{1,3}\s*(references|referencias|referências)\b/im.test(
-      article.content_md,
-    );
-  const healthNotice = article.show_health_disclaimer ? (
-    <aside
-      role="note"
-      className="not-prose my-8 border-l-4 border-amber-500 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 dark:bg-amber-950/30 dark:text-amber-100"
-    >
+  const healthNotice = healthNoticeEnabled ? (
+    <HealthDisclaimer title={labels.healthNoticeTitle}>
       {labels.healthNotice}
-    </aside>
+    </HealthDisclaimer>
   ) : null;
   const jsonLd = {
     "@context": "https://schema.org",
@@ -79,8 +81,9 @@ export async function LocalizedArticlePage({
       <article className="mx-auto max-w-3xl">
         <Link
           href={`/${locale}`}
-          className="mb-6 inline-flex text-sm text-muted-foreground hover:text-foreground"
+          className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
+          <ChevronLeft className="size-4" aria-hidden="true" />
           {labels.allArticles}
         </Link>
 
@@ -93,19 +96,31 @@ export async function LocalizedArticlePage({
               className="size-4 text-muted-foreground"
               aria-hidden="true"
             />
-            {translations.map((translation) => (
-              <Link
-                key={translation.language_code}
-                href={articlePath(translation.language_code, translation.slug)}
-                hrefLang={LOCALE_CONFIG[translation.language_code].htmlLang}
-                aria-current={
-                  translation.language_code === locale ? "page" : undefined
-                }
-                className="underline-offset-4 hover:underline aria-[current=page]:font-semibold"
-              >
-                {LOCALE_CONFIG[translation.language_code].label}
-              </Link>
-            ))}
+            {[...translations]
+              .sort(
+                (a, b) =>
+                  ARTICLE_LANGUAGE_ORDER.indexOf(a.language_code) -
+                  ARTICLE_LANGUAGE_ORDER.indexOf(b.language_code),
+              )
+              .map((translation) => (
+                <Link
+                  key={translation.language_code}
+                  href={articlePath(
+                    translation.language_code,
+                    translation.slug,
+                  )}
+                  hrefLang={LOCALE_CONFIG[translation.language_code].htmlLang}
+                  aria-current={
+                    translation.language_code === locale ? "page" : undefined
+                  }
+                  className="inline-flex items-center gap-1 underline-offset-4 hover:underline aria-[current=page]:font-semibold"
+                >
+                  <span aria-hidden="true">
+                    {LOCALE_CONFIG[translation.language_code].flag}
+                  </span>
+                  {LOCALE_CONFIG[translation.language_code].label}
+                </Link>
+              ))}
           </nav>
         )}
 
@@ -127,7 +142,9 @@ export async function LocalizedArticlePage({
             {article.excerpt}
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-y py-4 text-sm text-muted-foreground">
-            <span>{article.author_name}</span>
+            <span>
+              {labels.by} {authorDisplayName(article.author_name)}
+            </span>
             <time dateTime={article.published_at ?? undefined}>
               {formatDate(
                 article.published_at,
@@ -154,11 +171,75 @@ export async function LocalizedArticlePage({
           </div>
         )}
 
-        <Markdown
-          content={article.content_md}
-          beforeReferences={hasReferences ? healthNotice : undefined}
-        />
-        {!hasReferences && healthNotice}
+        <Markdown content={article.content_md} />
+        {healthNotice}
+        <ArticleLikeButton articleId={article.id} locale={locale} />
+        <section className="pt-8" aria-labelledby="about-author">
+          <h2 id="about-author" className="mb-4 font-serif text-2xl font-bold">
+            {labels.aboutAuthor}
+          </h2>
+          <div className="flex items-start gap-4">
+            {author?.avatar_url ? (
+              <Image
+                src={author.avatar_url}
+                alt={authorDisplayName(article.author_name)}
+                width={72}
+                height={72}
+                className="size-18 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <span className="flex size-18 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <User className="size-8" aria-hidden="true" />
+              </span>
+            )}
+            <div className="min-w-0">
+              <p className="font-semibold text-foreground">
+                {author?.name || authorDisplayName(article.author_name)}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                {(locale === "en"
+                  ? author?.article_description_en
+                  : author?.article_description_es) ||
+                  labels.authorDescription.replace(
+                    "{name}",
+                    authorDisplayName(article.author_name),
+                  )}
+              </p>
+              <Link
+                href={authorPath(locale, authorSlug(article.author_name))}
+                className="mt-3 inline-flex text-sm font-medium text-primary hover:underline"
+              >
+                {labels.authorArticles}
+              </Link>
+            </div>
+          </div>
+        </section>
+        <section className="mt-8 border-t pt-8">
+          <div
+            className="rounded-lg border bg-card p-5"
+            aria-labelledby="article-donation-heading"
+          >
+            <h2
+              id="article-donation-heading"
+              className="flex items-center gap-2 font-serif text-xl font-bold"
+            >
+              <Heart className="size-5 text-primary" aria-hidden="true" />
+              {labels.donationTitle}
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {labels.donationDescription}
+            </p>
+            <Link
+              href={`https://wa.me/5542999355018?text=${encodeURIComponent(labels.donationMessage)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <MessageCircle className="size-4" aria-hidden="true" />
+              {labels.donationAction}
+            </Link>
+          </div>
+        </section>
       </article>
     </main>
   );

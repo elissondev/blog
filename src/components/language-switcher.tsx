@@ -5,11 +5,6 @@ import { useRouter } from "next/navigation";
 import { LOCALE_CONFIG, type ArticleLanguage } from "@/lib/locales";
 
 const languages: ArticleLanguage[] = ["pt-BR", "en", "es"];
-const flags: Record<ArticleLanguage, string> = {
-  "pt-BR": "🇧🇷",
-  en: "🇺🇸",
-  es: "🇪🇸",
-};
 
 export function LanguageSwitcher({
   currentLanguage,
@@ -30,7 +25,7 @@ export function LanguageSwitcher({
           aria-hidden="true"
           className="pointer-events-none text-base leading-none"
         >
-          {flags[currentLanguage]}
+          {LOCALE_CONFIG[currentLanguage].flag}
         </span>
         <select
           aria-label={label}
@@ -48,7 +43,7 @@ export function LanguageSwitcher({
               lang={LOCALE_CONFIG[language].htmlLang}
               className="text-foreground"
             >
-              {flags[language]} {LOCALE_CONFIG[language].label}
+              {LOCALE_CONFIG[language].flag} {LOCALE_CONFIG[language].label}
             </option>
           ))}
         </select>
@@ -68,7 +63,7 @@ export function LanguageSwitcher({
               className="flex h-9 min-w-9 items-center justify-center rounded-md border px-2 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground aria-[current=page]:border-primary aria-[current=page]:bg-accent aria-[current=page]:text-foreground"
             >
               <span aria-hidden="true" className="text-base leading-none">
-                {flags[language]}
+                {LOCALE_CONFIG[language].flag}
               </span>
             </Link>
           );

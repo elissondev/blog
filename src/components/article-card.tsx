@@ -7,6 +7,7 @@ import { formatDate, authorDisplayName, authorSlug } from "@/lib/utils";
 import type { ArticleCard } from "@/lib/types";
 import {
   articlePath,
+  authorPath,
   localizedTaxonomyName,
   type ArticleLanguage,
 } from "@/lib/locales";
@@ -95,16 +96,12 @@ export function ArticleCardComponent({
           </time>
           <span className="flex items-center gap-1">
             <User className="size-3.5" />
-            {language === "pt-BR" ? (
-              <Link
-                href={`/autor/${authorSlug(article.author_name)}`}
-                className="hover:text-foreground"
-              >
-                {authorDisplayName(article.author_name)}
-              </Link>
-            ) : (
-              authorDisplayName(article.author_name)
-            )}
+            <Link
+              href={authorPath(language, authorSlug(article.author_name))}
+              className="hover:text-foreground"
+            >
+              {authorDisplayName(article.author_name)}
+            </Link>
           </span>
           <span>
             {article.reading_minutes} {copy.reading}

@@ -267,7 +267,11 @@ export async function getAuthors(): Promise<
     filterSlug: string;
     count: number;
     description: string | null;
+    description_en: string | null;
+    description_es: string | null;
     article_description: string | null;
+    article_description_en: string | null;
+    article_description_es: string | null;
     avatar_url: string | null;
   }[]
 > {
@@ -281,7 +285,11 @@ export async function getAuthors(): Promise<
       filterSlug: authorFilterSlug(name),
       count,
       description: null,
+      description_en: null,
+      description_es: null,
       article_description: null,
+      article_description_en: null,
+      article_description_es: null,
       avatar_url: null,
     }));
   }
@@ -300,7 +308,7 @@ async function getCachedAuthors(): Promise<
   const { data } = await supabase
     .from("articles")
     .select(
-      "author_id, profiles(full_name, description, article_description, avatar_url)",
+      "author_id, profiles(full_name, description, description_en, description_es, article_description, article_description_en, article_description_es, avatar_url)",
     )
     .eq("status", "published")
     .eq("language_code", "pt-BR");
@@ -310,7 +318,11 @@ async function getCachedAuthors(): Promise<
       name: string;
       count: number;
       description: string | null;
+      description_en: string | null;
+      description_es: string | null;
       article_description: string | null;
+      article_description_en: string | null;
+      article_description_es: string | null;
       avatar_url: string | null;
     }
   >();
@@ -320,7 +332,11 @@ async function getCachedAuthors(): Promise<
         profiles: {
           full_name: string;
           description: string | null;
+          description_en: string | null;
+          description_es: string | null;
           article_description: string | null;
+          article_description_en: string | null;
+          article_description_es: string | null;
           avatar_url: string | null;
         } | null;
       }
@@ -330,7 +346,11 @@ async function getCachedAuthors(): Promise<
       name: p.full_name,
       count: 0,
       description: p.description,
+      description_en: p.description_en,
+      description_es: p.description_es,
       article_description: p.article_description,
+      article_description_en: p.article_description_en,
+      article_description_es: p.article_description_es,
       avatar_url: p.avatar_url,
     };
     cur.count += 1;
@@ -500,6 +520,40 @@ async function getCachedPublishedTranslations(
     return [];
   }
   return (data ?? []) as PublishedTranslation[];
+}
+
+export async function hasPublishedHealthDisclaimer(
+  translationGroupId: string,
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    const article = demoArticles.find((item) => item.id === translationGroupId);
+    return article?.show_health_disclaimer ?? false;
+  }
+  return getCachedHealthDisclaimer(translationGroupId);
+}
+
+async function getCachedHealthDisclaimer(
+  translationGroupId: string,
+): Promise<boolean> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CACHE_TAGS.articles, `translation-group:${translationGroupId}`);
+
+  const supabase = createClientPublic();
+  const { data, error } = await supabase
+    .from("articles")
+    .select("id")
+    .eq("translation_group_id", translationGroupId)
+    .eq("status", "published")
+    .eq("show_health_disclaimer", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("article health disclaimer:", error.message);
+    return false;
+  }
+  return Boolean(data);
 }
 
 export type SitemapArticle = {
