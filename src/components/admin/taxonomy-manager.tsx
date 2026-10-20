@@ -371,6 +371,7 @@ function TagFormFields({
 
   return (
     <form action={submit} className="grid gap-3 sm:grid-cols-2">
+      {tag && <input type="hidden" name="id" value={tag.id} />}
       <div>
         <label
           className="text-xs font-medium text-muted-foreground"
