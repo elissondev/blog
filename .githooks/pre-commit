@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+version_bump=${VERSION_BUMP:-patch}
+
+case "$version_bump" in
+	patch|minor|major) ;;
+	*)
+		printf 'VERSION_BUMP deve ser patch, minor ou major (recebido: %s)\n' "$version_bump" >&2
+		exit 1
+		;;
+esac
+
+npm version "$version_bump" --no-git-tag-version --ignore-scripts
+git add package.json package-lock.json

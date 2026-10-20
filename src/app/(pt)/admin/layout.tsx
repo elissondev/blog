@@ -15,6 +15,7 @@ import {
 import { logoutAction } from "@/app/(pt)/admin/login/actions";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
+import packageJson from "../../../../package.json";
 
 export const metadata: Metadata = {
   title: {
@@ -82,6 +83,12 @@ export default async function AdminLayout({
             </Link>
           </nav>
           <div className="ml-auto flex items-center gap-2">
+            <span
+              className="rounded-md border px-2 py-1 font-mono text-xs text-muted-foreground"
+              title="Versão do sistema"
+            >
+              v{packageJson.version}
+            </span>
             <span className="hidden max-w-40 truncate text-sm text-muted-foreground md:inline">
               {userName}
             </span>

@@ -4,13 +4,13 @@ Blog completo com **Next.js 16 (App Router) + Tailwind v4 + shadcn/ui + Supabase
 
 ## Stack
 
-| Camada | Tecnologia |
-|---|---|
-| Framework | Next.js 16 · React 19 · Server Components · ISR/SSG |
-| UI | Tailwind CSS v4 · shadcn/ui (Radix + CVA) · @tailwindcss/typography · lucide-react |
-| Editor | TipTap 3 (WYSIWYG → Markdown GFM, colar conteúdo formatado, upload de imagens) |
-| Render MD | react-markdown 10 + remark-gfm + rehype-slug |
-| Backend | Supabase: Auth (email/senha), Postgres (RLS + full-text search pt-BR), Storage (imagens) |
+| Camada    | Tecnologia                                                                               |
+| --------- | ---------------------------------------------------------------------------------------- |
+| Framework | Next.js 16 · React 19 · Server Components · ISR/SSG                                      |
+| UI        | Tailwind CSS v4 · shadcn/ui (Radix + CVA) · @tailwindcss/typography · lucide-react       |
+| Editor    | TipTap 3 (WYSIWYG → Markdown GFM, colar conteúdo formatado, upload de imagens)           |
+| Render MD | react-markdown 10 + remark-gfm + rehype-slug                                             |
+| Backend   | Supabase: Auth (email/senha), Postgres (RLS + full-text search pt-BR), Storage (imagens) |
 
 ## Rodando em modo demo (sem Supabase)
 
@@ -20,6 +20,10 @@ npm run dev
 ```
 
 Sem `.env.local`, todo o site funciona com 12 artigos fictícios de neurociência — ótimo para validar o layout. O painel `/admin` também abre (somente visualização; nada persiste).
+
+## Versões
+
+Cada commit incrementa automaticamente o patch. Para uma nova funcionalidade compatível, use `VERSION_BUMP=minor git commit`; para uma mudança incompatível, use `VERSION_BUMP=major git commit`. O incremento atualiza `package.json` e `package-lock.json` e é incluído no próprio commit.
 
 ## Configurando o Supabase (produção)
 
@@ -32,7 +36,7 @@ Sem `.env.local`, todo o site funciona com 12 artigos fictícios de neurociênci
 4. Copie `.env.example` → `.env.local` e preencha (Project Settings → API):
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY` *(secreta — só server-side)*
+   - `SUPABASE_SERVICE_ROLE_KEY` _(secreta — só server-side)_
    - `NEXT_PUBLIC_SITE_URL` (ex.: `https://blog.seudominio.com`)
 5. `npm run dev` → acesse `/admin/login`.
 

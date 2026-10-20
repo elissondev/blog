@@ -1,8 +1,9 @@
 {
   "name": "neuroblog",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "scripts": {
+    "prepare": "node scripts/setup-git-hooks.mjs",
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
