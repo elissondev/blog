@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { CurrentYear } from "@/components/current-year";
 import Link from "next/link";
 import { Leaf, Rss } from "lucide-react";
+import { ThemeScript } from "@/components/theme-script";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -74,8 +75,13 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${serif.variable}`}>
+    <html
+      lang="pt-BR"
+      className={`${inter.variable} ${serif.variable}`}
+      suppressHydrationWarning
+    >
       <head>
+        <ThemeScript />
         <link
           rel="alternate"
           type="application/rss+xml"

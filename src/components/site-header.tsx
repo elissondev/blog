@@ -4,6 +4,7 @@ import { Leaf } from "lucide-react";
 import { SearchBox } from "./search-box";
 import { SiteNavigation, SiteNavigationFallback } from "./site-navigation";
 import { LanguageSwitcher } from "./language-switcher";
+import { ThemeToggle } from "./theme-toggle";
 
 export function SiteHeader() {
   return (
@@ -30,6 +31,7 @@ export function SiteHeader() {
           </Suspense>
         </div>
         <LanguageSwitcher currentLanguage="pt-BR" label="Idioma do site" />
+        <ThemeToggle />
       </div>
     </header>
   );

@@ -8,6 +8,8 @@ import { LOCALE_CONFIG, isLocale, SUPPORTED_LOCALES } from "@/lib/locales";
 import { Leaf, Rss } from "lucide-react";
 import { CurrentYear } from "@/components/current-year";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeScript } from "@/components/theme-script";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -74,8 +76,10 @@ export default async function LocalizedRootLayout({
     <html
       lang={LOCALE_CONFIG[locale].htmlLang}
       className={`${inter.variable} ${serif.variable}`}
+      suppressHydrationWarning
     >
       <head>
+        <ThemeScript />
         <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
       </head>
       <body className="min-h-dvh font-sans">
@@ -106,6 +110,14 @@ export default async function LocalizedRootLayout({
             <LanguageSwitcher
               currentLanguage={locale}
               label={isEnglish ? "Choose language" : "Elegir idioma"}
+            />
+            <ThemeToggle
+              darkModeLabel={
+                isEnglish ? "Enable dark mode" : "Activar modo oscuro"
+              }
+              lightModeLabel={
+                isEnglish ? "Enable light mode" : "Activar modo claro"
+              }
             />
           </div>
         </header>
