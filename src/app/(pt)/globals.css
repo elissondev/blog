@@ -118,6 +118,37 @@
   }
 }
 
+body.admin-login-active > header,
+body.admin-login-active .admin-panel-header {
+  display: none;
+}
+
+body.admin-login-active {
+  display: flex;
+  flex-direction: column;
+}
+
+body.admin-login-active .admin-layout {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  background: transparent;
+}
+
+body.admin-login-active .admin-layout main {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
+.admin-login-page {
+  min-height: 0;
+  background: transparent;
+}
+
 /* TipTap editor */
 .tiptap {
   outline: none;

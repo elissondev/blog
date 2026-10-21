@@ -44,8 +44,8 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <div className="admin-layout min-h-screen bg-muted/30">
+      <header className="admin-panel-header sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
           <nav
             aria-label="Navegação do painel"

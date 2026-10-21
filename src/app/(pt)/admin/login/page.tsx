@@ -16,7 +16,7 @@ export default async function LoginPage({
 }) {
   const { next } = await searchParams;
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
+    <div className="admin-login-page flex w-full flex-1 items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
           <Link
@@ -61,12 +61,6 @@ export default async function LoginPage({
             <LoginForm next={next} />
           )}
         </div>
-
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          <Link href="/" className="underline-offset-4 hover:underline">
-            ← Voltar ao blog
-          </Link>
-        </p>
       </div>
     </div>
   );

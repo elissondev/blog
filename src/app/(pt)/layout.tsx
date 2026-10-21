@@ -7,6 +7,7 @@ import { CurrentYear } from "@/components/current-year";
 import Link from "next/link";
 import { Leaf, Rss } from "lucide-react";
 import { ThemeScript } from "@/components/theme-script";
+import { AdminLoginRouteStyle } from "@/components/admin/admin-login-route-style";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -91,6 +92,7 @@ export default function RootLayout({
         <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
       </head>
       <body className="min-h-dvh font-sans">
+        <AdminLoginRouteStyle />
         <Script id="google-analytics-init" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
