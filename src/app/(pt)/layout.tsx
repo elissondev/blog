@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Script from "next/script";
 import { Inter, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
@@ -92,7 +93,9 @@ export default function RootLayout({
         <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
       </head>
       <body className="min-h-dvh font-sans">
-        <AdminLoginRouteStyle />
+        <Suspense fallback={null}>
+          <AdminLoginRouteStyle />
+        </Suspense>
         <Script id="google-analytics-init" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
